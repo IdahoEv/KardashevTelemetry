@@ -10,7 +10,7 @@
 
 ## Repositories
 - **KardashevTelemetry** (this repo)
-- **Kardashev** (`IdahoEv/Kardashev`) — the game; emits the telemetry. Parent epic: Kardashev #656 "Telemetry visibility and hosting" (Milestone 3)
+- **Kardashev** (`IdahoEv/Kardashev`) — the game; emits the telemetry. Parent epic: Kardashev Is656 "Telemetry visibility and hosting" (Milestone 3)
 
 ## Trigger-gated tickets
 Do not start, and do not offer in `/pick`, until fired.
@@ -28,4 +28,4 @@ Ungated: Is1 (scaffold), Is2 (Discord ingest), Is3 (DuckDB queries).
 ## Standing responsibilities
 - Link new tickets to the Kardashev epic; put the estimate in the ticket body.
 - Issue/PR reference style: see `CLAUDE.md`.
-- Tracker ↔ Kardashev #656 sync: surface drift, don't reconcile silently.
+- Tracker ↔ Kardashev Is656 sync: surface drift, don't reconcile silently.
