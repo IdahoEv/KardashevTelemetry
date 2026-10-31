@@ -24,6 +24,17 @@ uv sync
 uv run pytest      # the test command
 ```
 
+## Fetch and ingest
+
+```
+export DISCORD_BOT_TOKEN=...      # read-only bot token; never commit
+export DISCORD_CHANNEL_ID=...
+uv run kardashev-analysis fetch   # new attachments -> data/raw/<message_id>_<attachment_id>.jsonl
+uv run kardashev-analysis ingest  # data/raw -> data/sessions/<session_id>.jsonl
+```
+
+`fetch` is idempotent. `ingest` keeps the largest (then latest) copy per `session_id`, orders rows by `props.tick` then `seq`, excludes `dev_session` sessions (count printed), and skips sessions whose `schema_version` is not 1 with a warning.
+
 ## Queries
 
 `uv run tel --list` lists the canned queries in `analysis/sql/`; `uv run tel <name>` prints one as a table over `data/sessions/*.jsonl`. `--sessions '<glob>'` points it elsewhere.
