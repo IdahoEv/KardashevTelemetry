@@ -24,6 +24,17 @@ uv sync
 uv run pytest      # the test command
 ```
 
+## Fetch and ingest
+
+```
+export DISCORD_BOT_TOKEN=...      # read-only bot token; never commit
+export DISCORD_CHANNEL_ID=...
+uv run kardashev-analysis fetch   # new attachments -> data/raw/<message_id>_<attachment_id>.jsonl
+uv run kardashev-analysis ingest  # data/raw -> data/sessions/<session_id>.jsonl
+```
+
+`fetch` is idempotent. `ingest` keeps the largest (then latest) copy per `session_id`, orders rows by `props.tick` then `seq`, excludes `dev_session` sessions (count printed), and skips sessions whose `schema_version` is not 1 with a warning.
+
 ## Data hygiene
 
 `data/` and `.scratch/` are gitignored. Real sessions contain `install_id`, `player_name` and stack traces, so they must never be committed. Put downloaded sessions in `data/`. Everything under `analysis/tests/fixtures/` is synthetic.
