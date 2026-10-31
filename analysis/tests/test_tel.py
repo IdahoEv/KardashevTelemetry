@@ -6,7 +6,9 @@ import pytest
 from kardashev_analysis import tel
 
 FIXTURES = Path(__file__).parent / "fixtures"
-SESSION_FILES = ["session_normal.jsonl", "session_dev.jsonl", "session_stalled.jsonl"]
+SESSION_FILES = [
+    "session_normal.jsonl", "session_normal_early.jsonl", "session_dev.jsonl", "session_stalled.jsonl",
+]
 
 S1 = "11111111-0000-4000-8000-000000000001"
 S2 = "11111111-0000-4000-8000-000000000002"
@@ -92,3 +94,12 @@ def test_main_runs_query_as_table(sessions, capsys):
 def test_main_unknown_query_exits_2(capsys):
     assert tel.main(["nope"]) == 2
     assert "nope" in capsys.readouterr().err
+
+
+def test_format_table_with_no_rows():
+    assert tel.format_table(["a", "bb"], []).splitlines() == ["a  bb", "-  --"]
+
+
+def test_main_no_matching_files_exits_1(tmp_path, capsys):
+    assert tel.main(["event_counts", "--sessions", str(tmp_path / "*.jsonl")]) == 1
+    assert capsys.readouterr().err.startswith("tel:")

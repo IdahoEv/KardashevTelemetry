@@ -27,7 +27,7 @@ def run_query(name, sessions=DEFAULT_SESSIONS):
 
 def format_table(columns, rows):
     cells = [[str(v) for v in row] for row in rows]
-    widths = [max(len(c), *(len(r[i]) for r in cells)) for i, c in enumerate(columns)]
+    widths = [max([len(c), *(len(r[i]) for r in cells)]) for i, c in enumerate(columns)]
     numeric = [all(isinstance(r[i], (int, float)) for r in rows) and bool(rows)
                for i in range(len(columns))]
 
@@ -59,5 +59,8 @@ def main(argv=None):
     except UnknownQuery:
         print(f"tel: unknown query '{args.query}' (see --list)", file=sys.stderr)
         return 2
+    except duckdb.Error as e:
+        print(f"tel: {e}", file=sys.stderr)
+        return 1
     print(format_table(columns, rows))
     return 0
