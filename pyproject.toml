@@ -5,6 +5,9 @@ description = "Analysis of Kardashev playtest telemetry sessions"
 requires-python = ">=3.12"
 dependencies = ["duckdb"]
 
+[project.scripts]
+tel = "kardashev_analysis.tel:main"
+
 [dependency-groups]
 dev = ["pytest"]
 
