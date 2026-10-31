@@ -35,6 +35,22 @@ uv run kardashev-analysis ingest  # data/raw -> data/sessions/<session_id>.jsonl
 
 `fetch` is idempotent. `ingest` keeps the largest (then latest) copy per `session_id`, orders rows by `props.tick` then `seq`, excludes `dev_session` sessions (count printed), and skips sessions whose `schema_version` is not 1 with a warning.
 
+## Queries
+
+`uv run tel --list` lists the canned queries in `analysis/sql/`; `uv run tel <name>` prints one as a table over `data/sessions/*.jsonl`. `--sessions '<glob>'` points it elsewhere.
+
+| Query | Answers |
+|---|---|
+| `time_to_goal` | Earliest `ticked_time_s` of each `milestone_reached`, per install |
+| `session_length` | Length in seconds (`max(t_ms)`) and event count, per session |
+| `event_counts` | Events by type |
+| `stalls_per_session` | `building_stalled` count, per session |
+
+### Adding a query
+
+1. Add `analysis/sql/<name>.sql`. Read sessions with `read_json_auto('$SESSIONS', union_by_name = true)`; the runner substitutes the glob for `$SESSIONS`. Cast UUID columns with `::varchar`.
+2. Add a test in `analysis/tests/test_tel.py` asserting exact rows on the fixtures, and add the name to `test_list_queries_finds_every_sql_file`.
+
 ## Data hygiene
 
 `data/` and `.scratch/` are gitignored. Real sessions contain `install_id`, `player_name` and stack traces, so they must never be committed. Put downloaded sessions in `data/`. Everything under `analysis/tests/fixtures/` is synthetic.
@@ -45,6 +61,7 @@ uv run kardashev-analysis ingest  # data/raw -> data/sessions/<session_id>.jsonl
 |---|---|
 | `session_normal.jsonl` | Complete session, G1 and G2, `session_end` |
 | `session_dev.jsonl` | `dev_session` flips true at `dev_cheat_used` |
+| `session_stalled.jsonl` | Two `building_stalled`, G1, no `session_end` |
 | `session_normal_early.jsonl` | Shorter earlier upload of `session_normal` (same session, cut at G1) |
 
 ## CI
