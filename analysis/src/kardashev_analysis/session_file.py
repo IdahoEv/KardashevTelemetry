@@ -22,6 +22,10 @@ def parse(path):
     return events
 
 
+def _is_number(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
 def validate(events):
     """Raise ValueError unless events are well-formed enough to order and name."""
     if not events:
@@ -29,8 +33,11 @@ def validate(events):
     for e in events:
         if not isinstance(e, dict) or "seq" not in e:
             raise ValueError("event is not an object with a seq")
-        if not isinstance(e.get("props", {}), dict):
+        props = e.get("props", {})
+        if not isinstance(props, dict):
             raise ValueError("event props is not an object")
+        if not _is_number(e["seq"]) or not _is_number(props.get("tick", 0)):
+            raise ValueError("event seq or tick is not a number")
     session_id = events[0].get("session_id")
     if not isinstance(session_id, str) or not SESSION_ID.fullmatch(session_id):
         raise ValueError("missing or unsafe session_id")

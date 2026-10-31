@@ -102,6 +102,9 @@ def test_rejects_unsafe_session_ids(dirs, tmp_path, bad_id):
         [3],
         [{"session_id": "s", "schema_version": 1}],
         [{"session_id": "s", "seq": 1, "props": "x"}],
+        [{"session_id": "s", "seq": "2"}],
+        [{"session_id": "s", "seq": None}],
+        [{"session_id": "s", "seq": 1, "props": {"tick": "5"}}],
     ],
 )
 def test_malformed_session_is_skipped_without_aborting(dirs, events):
