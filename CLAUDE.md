@@ -19,6 +19,8 @@ Analysis tooling (and later a GCP collector) for session telemetry emitted by th
 ```bash
 uv sync                                  # install pinned deps
 uv run pytest -q                         # tests, quiet output
+uv run kardashev-analysis fetch          # Discord -> data/raw (needs DISCORD_BOT_TOKEN, DISCORD_CHANNEL_ID)
+uv run kardashev-analysis ingest         # data/raw -> data/sessions/<session_id>.jsonl
 uv run duckdb -readonly <db> -c "<sql>"  # read-only queries
 ```
 
