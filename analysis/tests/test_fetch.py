@@ -104,6 +104,7 @@ def test_list_messages_pages_forward_with_auth_header():
     ids = [m["id"] for m in client.list_messages("chan", after="0")]
     assert ids == ["1", "2", "3"]
     assert http.calls[0][1]["Authorization"] == "Bot tok"
+    assert http.calls[0][1]["User-Agent"].startswith("KardashevTelemetry/")
     assert "after=2" in http.calls[1][0]
 
 

@@ -5,6 +5,10 @@ import urllib.request
 
 API = "https://discord.com/api/v10"
 MAX_RETRIES = 5
+# Discord rejects default library User-Agents with a Cloudflare 403.
+HEADERS = {
+    "User-Agent": "KardashevTelemetry/0.1 (https://github.com/IdahoEv/KardashevTelemetry)"
+}
 
 
 class DiscordError(RuntimeError):
@@ -28,8 +32,9 @@ class DiscordClient:
         self._sleep = sleep
 
     def _get(self, url, headers):
+        request_headers = {**HEADERS, **headers}
         for _ in range(MAX_RETRIES):
-            status, response_headers, body = self._http(url, headers)
+            status, response_headers, body = self._http(url, request_headers)
             if status != 429:
                 break
             retry_after = {k.lower(): v for k, v in response_headers.items()}.get("retry-after", 1)
