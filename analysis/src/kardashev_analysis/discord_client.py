@@ -32,7 +32,8 @@ class DiscordClient:
             status, response_headers, body = self._http(url, headers)
             if status != 429:
                 break
-            self._sleep(float(response_headers.get("Retry-After", 1)))
+            retry_after = {k.lower(): v for k, v in response_headers.items()}.get("retry-after", 1)
+            self._sleep(float(retry_after))
         if status != 200:
             raise DiscordError(f"GET {url} failed with status {status}")
         return body

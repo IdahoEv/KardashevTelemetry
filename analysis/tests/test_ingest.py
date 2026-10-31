@@ -80,3 +80,33 @@ def test_rerun_is_idempotent(dirs):
     ingest(raw, sessions)
     assert (sessions / f"{NORMAL_ID}.jsonl").read_text() == first
     assert not list(sessions.glob("*.tmp"))
+
+
+def write_events(path, events):
+    path.write_text("".join(json.dumps(e) + "\n" for e in events))
+
+
+@pytest.mark.parametrize("bad_id", ["../escape", "/abs/x", ["a"], 7])
+def test_rejects_unsafe_session_ids(dirs, tmp_path, bad_id):
+    raw, sessions = dirs
+    write_events(raw / "100_1.jsonl", [{"session_id": bad_id, "seq": 1, "schema_version": 1}])
+    report = ingest(raw, sessions)
+    assert (report.written, report.skipped_invalid) == (0, 1)
+    assert not list(tmp_path.rglob("escape.jsonl"))
+    assert not list(sessions.glob("*.jsonl"))
+
+
+@pytest.mark.parametrize(
+    "events",
+    [
+        [3],
+        [{"session_id": "s", "schema_version": 1}],
+        [{"session_id": "s", "seq": 1, "props": "x"}],
+    ],
+)
+def test_malformed_session_is_skipped_without_aborting(dirs, events):
+    raw, sessions = dirs
+    write_events(raw / "100_1.jsonl", events)
+    put(raw, "session_normal.jsonl", "101_1.jsonl")
+    report = ingest(raw, sessions)
+    assert (report.written, report.skipped_invalid) == (1, 1)

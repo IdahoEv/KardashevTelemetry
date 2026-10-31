@@ -52,7 +52,7 @@ def test_second_run_skips_already_fetched_messages(tmp_path):
     again = fetch(client, "chan", tmp_path)
     assert again.fetched == 0
     assert client.downloads == ["https://cdn/100/7"]
-    assert client.after_calls[-1] == "100"
+    assert client.after_calls[-1] == "99"
 
 
 def test_picks_up_only_new_messages(tmp_path):
@@ -72,6 +72,16 @@ def test_does_not_redownload_a_file_already_on_disk(tmp_path):
     fetch(client, "chan", tmp_path)
     assert client.downloads == []
     assert (tmp_path / "100_7.jsonl").read_bytes() == b"old\n"
+
+
+def test_failed_download_midway_through_a_message_is_retried_next_run(tmp_path):
+    files = {"https://cdn/100/7": b"a\n"}
+    client = FakeClient([msg(100, (7, "a.jsonl"), (8, "b.jsonl"))], files)
+    with pytest.raises(KeyError):
+        fetch(client, "chan", tmp_path)
+    files["https://cdn/100/8"] = b"b\n"
+    fetch(client, "chan", tmp_path)
+    assert (tmp_path / "100_8.jsonl").read_bytes() == b"b\n"
 
 
 class FakeHttp:
@@ -109,6 +119,14 @@ def test_retries_after_429_using_retry_after():
     client = DiscordClient("tok", http=http, sleep=slept.append, page_size=5)
     assert [m["id"] for m in client.list_messages("chan")] == ["1"]
     assert slept == [2.0]
+
+
+def test_retry_after_lookup_is_case_insensitive():
+    slept = []
+    http = FakeHttp([(429, {"retry-after": "3"}, b"{}"), page(1)])
+    client = DiscordClient("tok", http=http, sleep=slept.append, page_size=5)
+    list(client.list_messages("chan"))
+    assert slept == [3.0]
 
 
 def test_error_status_raises_without_leaking_token():

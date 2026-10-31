@@ -1,7 +1,9 @@
 import json
+import re
 from pathlib import Path
 
 SUPPORTED_SCHEMA = 1
+SESSION_ID = re.compile(r"[A-Za-z0-9_-]{1,64}")
 
 
 class UnsupportedSchema(ValueError):
@@ -18,6 +20,20 @@ def parse(path):
         except json.JSONDecodeError as exc:
             raise ValueError(f"{path}: line {n}: {exc}") from exc
     return events
+
+
+def validate(events):
+    """Raise ValueError unless events are well-formed enough to order and name."""
+    if not events:
+        raise ValueError("empty file")
+    for e in events:
+        if not isinstance(e, dict) or "seq" not in e:
+            raise ValueError("event is not an object with a seq")
+        if not isinstance(e.get("props", {}), dict):
+            raise ValueError("event props is not an object")
+    session_id = events[0].get("session_id")
+    if not isinstance(session_id, str) or not SESSION_ID.fullmatch(session_id):
+        raise ValueError("missing or unsafe session_id")
 
 
 def is_dev(events):

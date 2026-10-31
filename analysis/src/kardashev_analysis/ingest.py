@@ -10,6 +10,7 @@ from kardashev_analysis.session_file import (
     is_dev,
     order,
     parse,
+    validate,
 )
 
 
@@ -35,9 +36,10 @@ def _load_copies(raw_dir, report):
     for path in sorted(Path(raw_dir).glob("*.jsonl")):
         try:
             events = parse(path)
+            validate(events)
             session_id = events[0]["session_id"]
-        except (ValueError, IndexError, KeyError) as exc:
-            _warn(f"skipping {path.name}: {exc or 'empty or missing session_id'}")
+        except ValueError as exc:
+            _warn(f"skipping {path.name}: {exc}")
             report.skipped_invalid += 1
             continue
         rank = (len(events), _message_id(path))

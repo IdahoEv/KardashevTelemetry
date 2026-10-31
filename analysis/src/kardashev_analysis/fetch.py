@@ -9,7 +9,8 @@ class FetchReport:
 
 def _latest_message_id(raw_dir):
     ids = [int(p.name.split("_", 1)[0]) for p in raw_dir.glob("*_*.jsonl")]
-    return str(max(ids)) if ids else None
+    # One below the max: a message whose attachments only partly landed is re-listed.
+    return str(max(ids) - 1) if ids else None
 
 
 def fetch(client, channel_id, raw_dir):
