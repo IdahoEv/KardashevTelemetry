@@ -3,11 +3,16 @@ import os
 import sys
 from pathlib import Path
 
+import uvicorn
+
+from kardashev_analysis.api import create_app
 from kardashev_analysis.discord_client import DiscordClient
 from kardashev_analysis.fetch import fetch
 from kardashev_analysis.ingest import ingest
 
-DEFAULT_DATA_DIR = Path(__file__).resolve().parents[3] / "data"
+REPO_ROOT = Path(__file__).resolve().parents[3]
+DEFAULT_DATA_DIR = REPO_ROOT / "data"
+DASHBOARD_DIST = REPO_ROOT / "dashboard" / "dist"
 
 
 def _parser():
@@ -16,6 +21,10 @@ def _parser():
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("fetch", help="download Discord attachments into <data>/raw")
     commands.add_parser("ingest", help="build <data>/sessions and <data>/dev_sessions from <data>/raw")
+    serve =commands.add_parser("serve", help="serve the dashboard API (and built UI, if present)")
+    serve.add_argument("--host", default="127.0.0.1")
+    serve.add_argument("--port", type=int, default=8000)
+    serve.add_argument("--data-dir", type=Path, dest="serve_data_dir", default=None)
     return parser
 
 
@@ -40,8 +49,16 @@ def _run_ingest(data_dir):
     return 0
 
 
+def _run_serve(args):
+    data_dir = args.serve_data_dir or args.data_dir
+    uvicorn.run(create_app(data_dir, DASHBOARD_DIST), host=args.host, port=args.port)
+    return 0
+
+
 def main(argv=None):
     args = _parser().parse_args(argv)
     if args.command == "fetch":
         return _run_fetch(args.data_dir)
+    if args.command == "serve":
+        return _run_serve(args)
     return _run_ingest(args.data_dir)

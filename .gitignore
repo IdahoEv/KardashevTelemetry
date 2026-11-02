@@ -5,3 +5,5 @@ data/
 __pycache__/
 .pytest_cache/
 *.duckdb
+dashboard/node_modules/
+dashboard/dist/

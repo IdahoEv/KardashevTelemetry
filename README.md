@@ -11,6 +11,7 @@ Analysis of playtest telemetry from [Kardashev](https://github.com/IdahoEv/Karda
 | `analysis/src/kardashev_analysis/` | Python package |
 | `analysis/sql/` | DuckDB queries |
 | `analysis/tests/` | pytest suite; `fixtures/` holds synthetic sessions |
+| `dashboard/` | Vite + React + TypeScript dashboard |
 | `docs/` | Project docs |
 
 A `collector/` directory will be added later.
@@ -34,6 +35,19 @@ uv run kardashev-analysis ingest  # data/raw -> data/sessions/ (and data/dev_ses
 ```
 
 `fetch` is idempotent. `ingest` keeps the largest (then latest) copy per `session_id`, orders rows by `props.tick` then `seq`, writes `dev_session` sessions to `data/dev_sessions/` instead of `data/sessions/` (moving a session whose latest copy flipped), and skips sessions whose `schema_version` is not 1 with a warning.
+
+## Dashboard
+
+Requires Node and yarn.
+
+```
+uv run kardashev-analysis serve                  # API at http://127.0.0.1:8000/api/health
+yarn --cwd dashboard install
+yarn --cwd dashboard dev                         # http://localhost:5173, proxies /api to :8000
+yarn --cwd dashboard build && uv run kardashev-analysis serve   # one process serves API + UI
+```
+
+`serve` takes `--host` (default `127.0.0.1`), `--port` (default `8000`) and `--data-dir` (default `data/`). Sessions contain `install_id` and `player_name`, so keep the default loopback bind. `GET /api/health` returns `{status, session_count}`, counted from `<data-dir>/sessions/*.jsonl`.
 
 ## Queries
 
@@ -67,4 +81,4 @@ uv run kardashev-analysis ingest  # data/raw -> data/sessions/ (and data/dev_ses
 
 ## CI
 
-`.github/workflows/ci.yml` runs `uv run pytest`. It may show red for GitHub billing reasons, as on Kardashev; run the tests locally.
+`.github/workflows/ci.yml` runs `uv run pytest` (Python job) and dashboard typecheck, lint and Vitest (separate job). It may show red for GitHub billing reasons, as on Kardashev; run the tests locally.
