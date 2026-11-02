@@ -11,3 +11,14 @@ export function formatSimTime(seconds: number | null): string {
   const days = seconds / 86_400;
   return `${days.toFixed(1)} days`;
 }
+
+export interface BuildLabel {
+  label: string;
+  title?: string;
+}
+
+export function formatBuild(version: string | null, commit: string | null): BuildLabel {
+  if (version) return { label: version };
+  if (commit) return { label: commit.slice(0, 7), title: commit };
+  return { label: "—" };
+}

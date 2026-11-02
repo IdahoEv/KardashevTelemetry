@@ -31,6 +31,10 @@ export function compareBuilds(a: string | null, b: string | null): number {
   return compareVersions(aVersion, bVersion);
 }
 
+export function compareSessionBuilds(a: SessionSummary, b: SessionSummary): number {
+  return compareBuilds(a.build_version || a.build_commit, b.build_version || b.build_commit);
+}
+
 export function compareNullableText(a: string | null, b: string | null): number {
   if (a === b) return 0;
   if (a === null) return -1;

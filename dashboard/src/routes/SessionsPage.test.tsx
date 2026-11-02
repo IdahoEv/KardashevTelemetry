@@ -272,6 +272,16 @@ test("refetches when the dev mode changes", async () => {
   expect(requestedUrls(fetchMock)).toContain("/api/sessions?dev=only");
 });
 
+test("shares the options request with the table when the filters match it", async () => {
+  const fetchMock = stubSessionsApi(FIXTURE);
+
+  renderPage(new QueryClient(), "/?dev=include");
+
+  await screen.findByText("3 of 5 sessions");
+  const includeUrls = requestedUrls(fetchMock).filter((url) => url.includes("dev=include"));
+  expect(includeUrls).toHaveLength(1);
+});
+
 test("renders build and goal options from the unfiltered data", async () => {
   stubSessionsApi(FIXTURE);
 

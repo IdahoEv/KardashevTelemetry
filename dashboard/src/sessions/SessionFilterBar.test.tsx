@@ -96,6 +96,18 @@ test("pre-fills the name input from the filters", () => {
   expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe("ev");
 });
 
+test("resyncs the name input when the filter name changes externally", () => {
+  vi.useFakeTimers();
+  const props = baseProps({ filters: { ...DEFAULT_FILTERS, name: "ev" } });
+  const { rerender } = render(<SessionFilterBar {...props} />);
+
+  rerender(<SessionFilterBar {...props} filters={{ ...DEFAULT_FILTERS, name: "" }} />);
+  vi.advanceTimersByTime(300);
+
+  expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe("");
+  expect(props.onNameCommit).toHaveBeenLastCalledWith("");
+});
+
 test("clear resets the name input and calls onClear", () => {
   const props = baseProps({
     filters: { dev: "only", name: "ev", build: ["0.3.1"], reached: ["G1"] },

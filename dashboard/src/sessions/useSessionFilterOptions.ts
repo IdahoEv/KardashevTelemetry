@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { DEFAULT_SESSION_FILTERS, fetchSessions } from "../api";
+import { formatBuild } from "../format";
 import { compareVersions } from "./sorting";
 
 export interface BuildOption {
@@ -13,7 +14,7 @@ const ALL_SESSIONS_FILTERS = { ...DEFAULT_SESSION_FILTERS, dev: "include" as con
 
 export function useSessionFilterOptions() {
   const { data, isPending } = useQuery({
-    queryKey: ["sessions", "options"],
+    queryKey: ["sessions", ALL_SESSIONS_FILTERS],
     queryFn: () => fetchSessions(ALL_SESSIONS_FILTERS),
   });
 
@@ -31,7 +32,7 @@ export function useSessionFilterOptions() {
         .map((version) => ({ value: version, label: version })),
       ...[...commits]
         .sort((a, b) => a.localeCompare(b))
-        .map((commit) => ({ value: commit, label: commit.slice(0, 7), title: commit })),
+        .map((commit) => ({ value: commit, ...formatBuild(null, commit) })),
     ];
   }, [data]);
 

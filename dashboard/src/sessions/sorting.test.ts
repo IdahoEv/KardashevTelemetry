@@ -3,6 +3,7 @@ import type { SessionSummary } from "../api";
 import {
   compareBuilds,
   compareNullableText,
+  compareSessionBuilds,
   compareSimTime,
   compareVersions,
   sortSessionsDefault,
@@ -36,6 +37,23 @@ describe("compareBuilds", () => {
 
   test("compares versions numerically", () => {
     expect(compareBuilds("0.3.10", "0.3.9")).toBeGreaterThan(0);
+  });
+});
+
+describe("compareSessionBuilds", () => {
+  test("an empty build version falls back to the commit", () => {
+    const commitOnly = summary({ build_version: "", build_commit: "abc1234567" });
+    const noBuild = summary({ build_version: null, build_commit: null });
+
+    expect(compareSessionBuilds(commitOnly, noBuild)).toBeGreaterThan(0);
+    expect(compareSessionBuilds(noBuild, commitOnly)).toBeLessThan(0);
+  });
+
+  test("prefers the version when both are present", () => {
+    const a = summary({ build_version: "0.3.1", build_commit: "abc1234567" });
+    const b = summary({ build_version: "0.3.2", build_commit: null });
+
+    expect(compareSessionBuilds(a, b)).toBeLessThan(0);
   });
 });
 

@@ -36,6 +36,11 @@ export function SessionFilterBar({
   goalOptions,
 }: SessionFilterBarProps) {
   const [nameInput, setNameInput] = useState(filters.name);
+  const [syncedName, setSyncedName] = useState(filters.name);
+  if (filters.name !== syncedName) {
+    setSyncedName(filters.name);
+    setNameInput(filters.name);
+  }
 
   useEffect(() => {
     const timer = setTimeout(() => onNameCommit(nameInput.trim()), NAME_DEBOUNCE_MS);

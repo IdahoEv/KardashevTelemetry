@@ -5,11 +5,11 @@ import { fetchSessions, type SessionSummary } from "../api";
 import { Card } from "../components/Card";
 import { DataTable, type Column, type SortState } from "../components/DataTable";
 import { EmptyState, ErrorState, LoadingState } from "../components/states";
-import { formatSimTime, formatWallTime } from "../format";
+import { formatBuild, formatSimTime, formatWallTime } from "../format";
 import { SessionFilterBar } from "../sessions/SessionFilterBar";
 import {
-  compareBuilds,
   compareNullableText,
+  compareSessionBuilds,
   compareSimTime,
   sortSessionsDefault,
 } from "../sessions/sorting";
@@ -57,11 +57,8 @@ const columns: Column<SessionSummary>[] = [
     header: "Build",
     sortable: true,
     render: (row) => {
-      if (row.build_version) return row.build_version;
-      if (row.build_commit) {
-        return <span title={row.build_commit}>{row.build_commit.slice(0, 7)}</span>;
-      }
-      return "—";
+      const build = formatBuild(row.build_version, row.build_commit);
+      return build.title ? <span title={build.title}>{build.label}</span> : build.label;
     },
   },
 ];
@@ -71,8 +68,7 @@ const comparators: Record<string, (a: SessionSummary, b: SessionSummary) => numb
   wallTime: (a, b) => a.wall_time_s - b.wall_time_s,
   simTime: (a, b) => compareSimTime(a.sim_time_s, b.sim_time_s),
   lastGoal: (a, b) => compareNullableText(a.last_goal, b.last_goal),
-  build: (a, b) =>
-    compareBuilds(a.build_version ?? a.build_commit, b.build_version ?? b.build_commit),
+  build: compareSessionBuilds,
 };
 
 function columnIsNumeric(key: string): boolean {
