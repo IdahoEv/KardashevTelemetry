@@ -6,10 +6,10 @@ import App from "./App";
 
 afterEach(() => vi.unstubAllGlobals());
 
-function renderApp(client: QueryClient) {
+function renderApp(client: QueryClient, path = "/") {
   render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[path]}>
         <App />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -36,6 +36,21 @@ test("shows an alert when the API responds with an error", async () => {
   renderApp(new QueryClient({ defaultOptions: { queries: { retry: false } } }));
 
   expect((await screen.findByRole("alert")).textContent).toContain("API unreachable");
+});
+
+test("serves the styleguide route in dev", () => {
+  renderApp(new QueryClient(), "/styleguide");
+
+  expect(screen.getByRole("heading", { name: /styleguide/i })).toBeTruthy();
+});
+
+test("omits the styleguide route outside dev", () => {
+  vi.stubEnv("DEV", false);
+
+  renderApp(new QueryClient(), "/styleguide");
+
+  expect(screen.queryByRole("heading", { name: /styleguide/i })).toBeNull();
+  vi.unstubAllEnvs();
 });
 
 test("renders the shell title and primary nav", async () => {

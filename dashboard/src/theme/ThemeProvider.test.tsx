@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, expect, test } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import { ThemeProvider } from "./ThemeProvider";
 import { ThemeToggle } from "./ThemeToggle";
@@ -54,6 +54,20 @@ test("restores the saved choice on mount", () => {
 
   expect(root.getAttribute("data-theme")).toBe("dark");
   expect((screen.getByLabelText("Dark") as HTMLInputElement).checked).toBe(true);
+});
+
+test("still applies the choice when storage is unavailable", () => {
+  const blocked = () => {
+    throw new DOMException("blocked", "SecurityError");
+  };
+  vi.spyOn(Storage.prototype, "getItem").mockImplementation(blocked);
+  vi.spyOn(Storage.prototype, "setItem").mockImplementation(blocked);
+
+  renderToggle();
+  fireEvent.click(screen.getByLabelText("Dark"));
+
+  expect(root.getAttribute("data-theme")).toBe("dark");
+  vi.restoreAllMocks();
 });
 
 test("ignores an unrecognised saved value", () => {
