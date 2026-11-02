@@ -11,7 +11,10 @@ beforeEach(() => {
   root.removeAttribute("data-theme");
 });
 
-afterEach(() => root.removeAttribute("data-theme"));
+afterEach(() => {
+  root.removeAttribute("data-theme");
+  vi.restoreAllMocks();
+});
 
 function renderToggle() {
   render(
@@ -67,7 +70,6 @@ test("still applies the choice when storage is unavailable", () => {
   fireEvent.click(screen.getByLabelText("Dark"));
 
   expect(root.getAttribute("data-theme")).toBe("dark");
-  vi.restoreAllMocks();
 });
 
 test("ignores an unrecognised saved value", () => {

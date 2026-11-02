@@ -22,7 +22,7 @@
 }
 
 .state--error .state__title {
-  color: var(--status-critical);
+  color: var(--status-critical-text);
 }
 
 .state__spinner {

@@ -4,7 +4,10 @@ import { MemoryRouter } from "react-router";
 import { afterEach, expect, test, vi } from "vitest";
 import App from "./App";
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
 
 function renderApp(client: QueryClient, path = "/") {
   render(
@@ -50,7 +53,6 @@ test("omits the styleguide route outside dev", () => {
   renderApp(new QueryClient(), "/styleguide");
 
   expect(screen.queryByRole("heading", { name: /styleguide/i })).toBeNull();
-  vi.unstubAllEnvs();
 });
 
 test("renders the shell title and primary nav", async () => {

@@ -58,7 +58,7 @@ for (const [themeName, tokens] of Object.entries(themes)) {
   });
 
   test(`${themeName}: text tokens have 4.5:1 contrast on page and card`, () => {
-    for (const text of ["--text-primary", "--text-secondary", "--text-muted"]) {
+    for (const text of ["--text-primary", "--text-secondary", "--text-muted", "--success-text", "--status-critical-text"]) {
       for (const surface of ["--page", "--surface-1"]) {
         expect(contrast(tokens[text], tokens[surface]), `${text} on ${surface}`).toBeGreaterThanOrEqual(4.5);
       }

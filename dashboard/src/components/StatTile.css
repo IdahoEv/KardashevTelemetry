@@ -36,5 +36,5 @@
 }
 
 .stat-tile__delta--bad {
-  color: var(--status-critical);
+  color: var(--status-critical-text);
 }
