@@ -96,6 +96,20 @@ test("pre-fills the name input from the filters", () => {
   expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe("ev");
 });
 
+test("keeps in-progress whitespace after the committed value lands in the URL", () => {
+  vi.useFakeTimers();
+  const props = baseProps();
+  const { rerender } = render(<SessionFilterBar {...props} />);
+
+  fireEvent.change(screen.getByLabelText("Name"), { target: { value: "evan " } });
+  vi.advanceTimersByTime(300);
+  expect(props.onNameCommit).toHaveBeenCalledWith("evan");
+
+  rerender(<SessionFilterBar {...props} filters={{ ...DEFAULT_FILTERS, name: "evan" }} />);
+
+  expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe("evan ");
+});
+
 test("resyncs the name input when the filter name changes externally", () => {
   vi.useFakeTimers();
   const props = baseProps({ filters: { ...DEFAULT_FILTERS, name: "ev" } });

@@ -39,7 +39,9 @@ export function SessionFilterBar({
   const [syncedName, setSyncedName] = useState(filters.name);
   if (filters.name !== syncedName) {
     setSyncedName(filters.name);
-    setNameInput(filters.name);
+    // A self-commit lands trimmed; overwriting the input then would delete
+    // edge whitespace the user may still be typing through.
+    if (nameInput.trim() !== filters.name) setNameInput(filters.name);
   }
 
   useEffect(() => {
