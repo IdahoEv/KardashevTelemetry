@@ -17,7 +17,7 @@ from kardashev_analysis.session_file import (
 @dataclass
 class IngestReport:
     written: int = 0
-    excluded_dev: int = 0
+    written_dev: int = 0
     skipped_schema: int = 0
     skipped_invalid: int = 0
 
@@ -54,10 +54,11 @@ def _write_atomic(path, events):
     os.replace(tmp, path)
 
 
-def ingest(raw_dir, sessions_dir):
+def ingest(raw_dir, sessions_dir, dev_sessions_dir):
     report = IngestReport()
-    sessions_dir = Path(sessions_dir)
+    sessions_dir, dev_sessions_dir = Path(sessions_dir), Path(dev_sessions_dir)
     sessions_dir.mkdir(parents=True, exist_ok=True)
+    dev_sessions_dir.mkdir(parents=True, exist_ok=True)
     for session_id, events in _load_copies(raw_dir, report).items():
         try:
             check_schema(events)
@@ -65,9 +66,11 @@ def ingest(raw_dir, sessions_dir):
             _warn(f"skipping session {session_id}: {exc}")
             report.skipped_schema += 1
             continue
-        if is_dev(events):
-            report.excluded_dev += 1
-            continue
-        _write_atomic(sessions_dir / f"{session_id}.jsonl", order(events))
-        report.written += 1
+        target, other = (dev_sessions_dir, sessions_dir) if is_dev(events) else (sessions_dir, dev_sessions_dir)
+        _write_atomic(target / f"{session_id}.jsonl", order(events))
+        (other / f"{session_id}.jsonl").unlink(missing_ok=True)
+        if target is dev_sessions_dir:
+            report.written_dev += 1
+        else:
+            report.written += 1
     return report

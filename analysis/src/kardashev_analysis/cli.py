@@ -20,8 +20,8 @@ def _parser():
     parser.add_argument("--data-dir", type=Path, default=DEFAULT_DATA_DIR)
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("fetch", help="download Discord attachments into <data>/raw")
-    commands.add_parser("ingest", help="build <data>/sessions from <data>/raw")
-    serve = commands.add_parser("serve", help="serve the dashboard API (and built UI, if present)")
+    commands.add_parser("ingest", help="build <data>/sessions and <data>/dev_sessions from <data>/raw")
+    serve =commands.add_parser("serve", help="serve the dashboard API (and built UI, if present)")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8000)
     serve.add_argument("--data-dir", type=Path, dest="serve_data_dir", default=None)
@@ -41,9 +41,9 @@ def _run_fetch(data_dir):
 
 
 def _run_ingest(data_dir):
-    report = ingest(data_dir / "raw", data_dir / "sessions")
+    report = ingest(data_dir / "raw", data_dir / "sessions", data_dir / "dev_sessions")
     print(f"written: {report.written}")
-    print(f"excluded (dev_session): {report.excluded_dev}")
+    print(f"written (dev): {report.written_dev}")
     print(f"skipped (schema_version): {report.skipped_schema}")
     print(f"skipped (unreadable): {report.skipped_invalid}")
     return 0

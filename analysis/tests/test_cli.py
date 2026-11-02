@@ -76,5 +76,6 @@ def test_ingest_prints_counts(tmp_path, capsys):
     assert cli.main(["--data-dir", str(tmp_path), "ingest"]) == 0
     out = capsys.readouterr().out
     assert "written: 1" in out
-    assert "excluded (dev_session): 1" in out
+    assert "written (dev): 1" in out
     assert len(list((tmp_path / "sessions").glob("*.jsonl"))) == 1
+    assert len(list((tmp_path / "dev_sessions").glob("*.jsonl"))) == 1

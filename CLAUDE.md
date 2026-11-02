@@ -12,7 +12,7 @@ Analysis tooling (and later a GCP collector) for session telemetry emitted by th
 | `dashboard/` | Vite + React + TypeScript SPA (TanStack Query, Vitest, ESLint). Talks to the API in `analysis/src/kardashev_analysis/api.py`; data access lives in `sessions_store.py` |
 | `collector/` | FastAPI upload-policy service. Not yet created (Is5); own tests and CI job |
 | `docs/` | Design docs (e.g. `collector-design.md` from Is4) |
-| `data/` | Local session store. Gitignored |
+| `data/` | Local session store: `raw/`, `sessions/`, `dev_sessions/`. Gitignored |
 | `.scratch/` | Throwaway scripts and queries. Gitignored |
 
 ## Commands
@@ -21,7 +21,7 @@ Analysis tooling (and later a GCP collector) for session telemetry emitted by th
 uv sync                                  # install pinned deps
 uv run pytest -q                         # tests, quiet output
 uv run kardashev-analysis fetch          # Discord -> data/raw (needs DISCORD_BOT_TOKEN, DISCORD_CHANNEL_ID)
-uv run kardashev-analysis ingest         # data/raw -> data/sessions/<session_id>.jsonl
+uv run kardashev-analysis ingest         # data/raw -> data/sessions/<session_id>.jsonl (dev: data/dev_sessions/)
 uv run kardashev-analysis serve          # API on 127.0.0.1:8000 (+ dashboard/dist if built); --host --port --data-dir
 yarn --cwd dashboard install             # dashboard deps
 yarn --cwd dashboard dev                 # Vite dev server, proxies /api to :8000
