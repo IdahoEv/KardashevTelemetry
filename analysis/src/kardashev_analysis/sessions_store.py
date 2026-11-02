@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, field
 
 import duckdb
 
@@ -26,7 +26,10 @@ select
     max(sim_time_s) as sim_time_s,
     list(props ->> 'milestone_id' order by seq) filter (where event = 'milestone_reached') as goals,
     count(*) as event_count,
-    bool_or(event = 'session_end') as ended
+    bool_or(event = 'session_end') as ended,
+    count(*) filter (where event = 'building_stalled') as stall_count,
+    list({{'goal': props ->> 'milestone_id', 'elapsed': (props ->> 'elapsed_sim_time_s')::double}} order by seq)
+        filter (where event = 'milestone_reached') as goal_times
 from e
 group by session_id
 order by session_id
@@ -47,6 +50,14 @@ class SessionSummary:
     dev: bool
     event_count: int
     ended: bool
+    stall_count: int = 0
+    goal_times: dict[str, float] = field(default_factory=dict)
+
+    def row(self):
+        return {k: v for k, v in asdict(self).items() if k not in _STATS_ONLY_FIELDS}
+
+
+_STATS_ONLY_FIELDS = {"stall_count", "goal_times"}
 
 
 def count_sessions(data_dir):
@@ -65,8 +76,12 @@ def _load_dir(directory, dev):
 
 
 def _summarize(row, dev):
-    session_id, install_id, player_name, version, commit, wall, sim, raw_goals, count, ended = row
+    session_id, install_id, player_name, version, commit, wall, sim, raw_goals, count, ended, stalls, raw_times = row
     goals = list(dict.fromkeys(raw_goals or []))
+    goal_times = {}
+    for entry in raw_times or []:
+        if entry["elapsed"] is not None:
+            goal_times[entry["goal"]] = min(entry["elapsed"], goal_times.get(entry["goal"], entry["elapsed"]))
     return SessionSummary(
         session_id=session_id,
         install_id=install_id,
@@ -80,5 +95,7 @@ def _summarize(row, dev):
         dev=dev,
         event_count=count,
         ended=bool(ended),
+        stall_count=stalls,
+        goal_times=goal_times,
     )
 

@@ -92,6 +92,48 @@ def test_sessions_rejects_unknown_dev_mode(full_data_dir):
     assert response.status_code == 422
 
 
+def _stats(data_dir, query=""):
+    response = TestClient(create_app(data_dir)).get(f"/api/stats{query}")
+    assert response.status_code == 200
+    return response.json()
+
+
+def test_stats_default_filter_excludes_dev(full_data_dir):
+    stats = _stats(full_data_dir)
+    assert stats["sessions"] == 3
+    assert stats["goals"]["G1"]["reached"] == 3
+    assert stats["goals"]["G1"]["reach_rate"] == 1.0
+    assert stats["goals"]["G1"]["time_to_goal"]["n"] == 3
+    assert stats["goals"]["G1"]["time_to_goal"]["min"] == 4000.0
+    assert stats["goals"]["G1"]["time_to_goal"]["max"] == 7000.0
+    assert stats["goals"]["G2"]["reached"] == 1
+    assert stats["stalls_per_session"] == {"n": 3, "mean": 2 / 3}
+
+
+def test_stats_dev_include_adds_the_dev_session(full_data_dir):
+    stats = _stats(full_data_dir, "?dev=include")
+    assert stats["sessions"] == 4
+    assert stats["goals"]["G1"]["time_to_goal"]["n"] == 4
+
+
+def test_stats_uses_the_same_filters_as_sessions(full_data_dir):
+    stats = _stats(full_data_dir, "?build=0.2.0")
+    assert stats["sessions"] == 1
+    assert stats["goals"]["G1"]["time_to_goal"]["median"] == 7000.0
+
+
+def test_stats_empty_match_is_null_not_an_error(full_data_dir):
+    stats = _stats(full_data_dir, "?name=nobody-has-this-name")
+    assert stats["sessions"] == 0
+    assert stats["wall_time_s"] == {"n": 0, "median": None, "mean": None}
+    assert stats["goals"] == {}
+    assert stats["events_per_session"] == {"n": 0, "median": None}
+
+
+def test_stats_with_no_data(tmp_path):
+    assert _stats(tmp_path)["sessions"] == 0
+
+
 def test_serves_built_dashboard_alongside_api(tmp_path):
     dist = tmp_path / "dist"
     dist.mkdir()

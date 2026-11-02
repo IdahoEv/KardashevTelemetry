@@ -43,6 +43,18 @@ def test_old_build_without_tick_stamps(full_data_dir):
     assert s.ended is True
 
 
+def test_goal_times_use_elapsed_sim_time_even_for_old_builds(full_data_dir):
+    sessions = _by_id(full_data_dir)
+    assert sessions[S1].goal_times == {"G1": 5400.0, "G2": 12000.0}
+    assert sessions[S4].goal_times == {"G1": 7000.0}
+
+
+def test_stall_count(full_data_dir):
+    sessions = _by_id(full_data_dir)
+    assert sessions[S3].stall_count == 2
+    assert sessions[S1].stall_count == 0
+
+
 def test_session_without_goals_has_null_last_goal(make_data_dir, tmp_path):
     data_dir = make_data_dir(sessions=["session_normal_early.jsonl"])
     (data_dir / "sessions" / "session_normal_early.jsonl").write_text(
