@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import type { BuildingsData } from "../api";
-import { buildChartModel, summarizeBuildings } from "./buildingsSeries";
+import { buildChartModel, goalDay, summarizeBuildings } from "./buildingsSeries";
 
 const DAY = 86_400;
 
@@ -47,6 +47,10 @@ test("no extra zero row when the first placement is at time zero", () => {
   expect(rows).toEqual([{ day: 0, counts: { mine: 1 } }]);
 });
 
+test("goal times convert to chart days", () => {
+  expect(goalDay({ goal: "Automate mining", sim_time_s: 3 * DAY })).toBe(3);
+});
+
 test("rows are extended to endDay holding the final counts", () => {
   const { rows } = buildChartModel(twoTypes, 5);
   expect(rows.at(-1)).toEqual({ day: 5, counts: { mine: 2, smelter: 1 } });
@@ -74,6 +78,38 @@ test("types beyond the eight palette slots fold into Other", () => {
   ]);
   expect(series.at(-1)?.slot).toBe(7);
   expect(rows.at(-1)?.counts.Other).toBe(3);
+});
+
+test("points at the same sim time collapse into one row keeping the latest counts", () => {
+  const { rows } = buildChartModel({
+    types: ["mine", "smelter"],
+    series: [
+      { sim_time_s: 0, counts: { mine: 1 } },
+      { sim_time_s: DAY, counts: { mine: 1, smelter: 1 } },
+      { sim_time_s: DAY, counts: { mine: 2, smelter: 1 } },
+    ],
+  });
+  expect(rows).toEqual([
+    { day: 0, counts: { mine: 1, smelter: 0 } },
+    { day: 1, counts: { mine: 2, smelter: 1 } },
+  ]);
+});
+
+test("out-of-order series still yields ascending rows and a max-time summary", () => {
+  const outOfOrder: BuildingsData = {
+    types: ["mine", "smelter"],
+    series: [
+      { sim_time_s: 3 * DAY, counts: { mine: 2, smelter: 1 } },
+      { sim_time_s: DAY, counts: { mine: 1 } },
+      { sim_time_s: 2 * DAY, counts: { mine: 1, smelter: 1 } },
+    ],
+  };
+  const { rows } = buildChartModel(outOfOrder, 5);
+  expect(rows.map((r) => r.day)).toEqual([0, 1, 2, 3, 5]);
+  expect(rows.at(-1)?.counts).toEqual({ mine: 2, smelter: 1 });
+  expect(summarizeBuildings(outOfOrder)).toBe(
+    "3 buildings of 2 types over 3.0 days. Most numerous: mine (2).",
+  );
 });
 
 test("summary states totals, type count, duration and the top type", () => {

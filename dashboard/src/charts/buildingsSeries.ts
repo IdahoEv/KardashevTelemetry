@@ -1,9 +1,13 @@
-import type { BuildingsData } from "../api";
+import type { BuildingsData, GoalTime } from "../api";
 import { formatSimTime } from "../format";
 import { SERIES_COLORS } from "./chartTheme";
 
-const SECONDS_PER_DAY = 86_400;
+export const SECONDS_PER_DAY = 86_400;
 const OTHER = "Other";
+
+export function goalDay(goal: GoalTime): number {
+  return goal.sim_time_s / SECONDS_PER_DAY;
+}
 
 export interface ChartSeries {
   key: string;
@@ -46,7 +50,15 @@ export function buildChartModel(buildings: BuildingsData, endDay = 0): ChartMode
     return { day, counts };
   };
 
-  const rows = buildings.series.map((p) => rowFor(p.sim_time_s / SECONDS_PER_DAY, p.counts));
+  const points = buildings.series
+    .map((p) => rowFor(p.sim_time_s / SECONDS_PER_DAY, p.counts))
+    .sort((a, b) => a.day - b.day);
+  const rows: ChartRow[] = [];
+  for (const row of points) {
+    const last = rows[rows.length - 1];
+    if (last && last.day === row.day) rows[rows.length - 1] = row;
+    else rows.push(row);
+  }
   const last = rows[rows.length - 1];
   if (endDay > last.day) rows.push({ day: endDay, counts: { ...last.counts } });
   if (rows[0].day > 0) rows.unshift(rowFor(0, {}));
@@ -54,8 +66,11 @@ export function buildChartModel(buildings: BuildingsData, endDay = 0): ChartMode
 }
 
 export function summarizeBuildings(buildings: BuildingsData): string {
-  const last = buildings.series.at(-1);
-  if (last === undefined) return "No buildings placed.";
+  if (buildings.series.length === 0) return "No buildings placed.";
+  let last = buildings.series[0];
+  for (const point of buildings.series) {
+    if (point.sim_time_s >= last.sim_time_s) last = point;
+  }
 
   const entries = Object.entries(last.counts);
   const total = entries.reduce((sum, [, n]) => sum + n, 0);

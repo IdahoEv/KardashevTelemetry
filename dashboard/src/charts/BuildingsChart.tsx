@@ -13,11 +13,17 @@ import type { BuildingsData, GoalTime } from "../api";
 import { DataTable, type Column } from "../components/DataTable";
 import { EmptyState } from "../components/states";
 import { formatDayTick, formatSimTime } from "../format";
-import { buildChartModel, summarizeBuildings, type ChartRow, type ChartSeries } from "./buildingsSeries";
+import {
+  buildChartModel,
+  goalDay,
+  SECONDS_PER_DAY,
+  summarizeBuildings,
+  type ChartRow,
+  type ChartSeries,
+} from "./buildingsSeries";
 import { chartTheme, seriesColor } from "./chartTheme";
 import "./BuildingsChart.css";
 
-const SECONDS_PER_DAY = 86_400;
 const LABEL_LANES = 3;
 
 type Texture = "solid" | "hatch-up" | "hatch-down" | "dots";
@@ -56,7 +62,7 @@ interface TooltipProps {
   series: ChartSeries[];
 }
 
-function BuildingsTooltip({ active, payload, series }: TooltipProps) {
+export function BuildingsTooltip({ active, payload, series }: TooltipProps) {
   const row = payload?.[0]?.payload;
   if (!active || row === undefined) return null;
   const total = series.reduce((sum, s) => sum + row.counts[s.key], 0);
@@ -85,7 +91,7 @@ interface GoalLabelProps {
   text: string;
 }
 
-function GoalLabel({ viewBox, lane, text }: GoalLabelProps) {
+export function GoalLabel({ viewBox, lane, text }: GoalLabelProps) {
   return (
     <text x={(viewBox?.x ?? 0) + 4} y={10 + lane * 14} fill="var(--text-secondary)" fontSize={11}>
       {text}
@@ -103,7 +109,7 @@ export function BuildingsChart({ buildings, goalTimes }: Props) {
   const [asTable, setAsTable] = useState(false);
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
 
-  const endDay = Math.max(0, ...goalTimes.map((g) => g.sim_time_s / SECONDS_PER_DAY));
+  const endDay = Math.max(0, ...goalTimes.map(goalDay));
   const { series, rows } = useMemo(() => buildChartModel(buildings, endDay), [buildings, endDay]);
 
   if (rows.length === 0) {
@@ -120,7 +126,7 @@ export function BuildingsChart({ buildings, goalTimes }: Props) {
 
   const columns: Column<ChartRow>[] = [
     { key: "day", header: "Sim day", numeric: true, render: (row) => formatDayTick(row.day) },
-    ...series.map((s) => ({
+    ...visible.map((s) => ({
       key: s.key,
       header: s.name,
       numeric: true,
@@ -212,7 +218,7 @@ export function BuildingsChart({ buildings, goalTimes }: Props) {
               {goalTimes.map((g, index) => (
                 <ReferenceLine
                   key={g.goal}
-                  x={g.sim_time_s / SECONDS_PER_DAY}
+                  x={goalDay(g)}
                   stroke="var(--text-muted)"
                   strokeDasharray="4 3"
                   label={<GoalLabel lane={index % LABEL_LANES} text={g.goal} />}
