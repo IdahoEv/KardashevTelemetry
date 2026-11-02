@@ -3,7 +3,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, expect, test, vi } from "vitest";
 import type { SessionSummary, SessionsResponse } from "../api";
-import { stubSessionsApi } from "../test/mocks";
+import { statsFixture, stubSessionsApi } from "../test/mocks";
 import { SessionsPage } from "./SessionsPage";
 
 afterEach(() => {
@@ -64,10 +64,7 @@ const FIXTURE: SessionsResponse = {
 };
 
 function stubSessionsResponse(response: SessionsResponse) {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn().mockResolvedValue(new Response(JSON.stringify(response))),
-  );
+  stubSessionsApi(response);
 }
 
 function failingClient(): QueryClient {
@@ -186,7 +183,7 @@ test("shows a loading state while the request is pending", () => {
 
   renderPage();
 
-  expect(screen.getByRole("status").textContent).toContain("Loading sessions");
+  expect(screen.getByText("Loading sessions…")).toBeTruthy();
 });
 
 test("shows an error state when the API fails", async () => {
@@ -194,7 +191,8 @@ test("shows an error state when the API fails", async () => {
 
   renderPage(failingClient());
 
-  expect((await screen.findByRole("alert")).textContent).toContain("Couldn't load sessions");
+  expect(await screen.findByText("Couldn't load sessions")).toBeTruthy();
+  expect(await screen.findByText("Couldn't load statistics")).toBeTruthy();
 });
 
 test("shows an empty state when there are no sessions", async () => {
@@ -278,8 +276,37 @@ test("shares the options request with the table when the filters match it", asyn
   renderPage(new QueryClient(), "/?dev=include");
 
   await screen.findByText("3 of 5 sessions");
-  const includeUrls = requestedUrls(fetchMock).filter((url) => url.includes("dev=include"));
+  const includeUrls = requestedUrls(fetchMock).filter(
+    (url) => url.startsWith("/api/sessions") && url.includes("dev=include"),
+  );
   expect(includeUrls).toHaveLength(1);
+});
+
+test("renders the statistics panel alongside the list", async () => {
+  stubSessionsApi(FIXTURE);
+
+  renderPage();
+
+  expect(await screen.findByText("3 of 5 sessions")).toBeTruthy();
+  expect(screen.getByText("Median wall time")).toBeTruthy();
+  expect(screen.getByText("Median sim time")).toBeTruthy();
+});
+
+test("refetches the statistics when a build checkbox is toggled", async () => {
+  const fetchMock = stubSessionsApi(
+    FIXTURE,
+    { ...FIXTURE, total: 1, sessions: [FIXTURE.sessions[0]] },
+    statsFixture({ sessions: 1 }),
+  );
+
+  renderPage();
+
+  await screen.findByText("3 of 5 sessions");
+  expect(requestedUrls(fetchMock)).toContain("/api/stats");
+  fireEvent.click(screen.getByLabelText("0.3.2"));
+
+  expect(await screen.findByText("1 of 5 sessions")).toBeTruthy();
+  expect(requestedUrls(fetchMock)).toContain("/api/stats?build=0.3.2");
 });
 
 test("renders build and goal options from the unfiltered data", async () => {

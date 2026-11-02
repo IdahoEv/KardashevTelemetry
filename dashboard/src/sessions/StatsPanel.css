@@ -1,0 +1,9 @@
+.stats-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.stats-panel .badge {
+  margin-left: var(--space-1);
+}

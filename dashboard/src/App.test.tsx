@@ -2,6 +2,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, expect, test, vi } from "vitest";
+import type { SessionsResponse } from "./api";
+import { stubSessionsApi } from "./test/mocks";
 import App from "./App";
 
 afterEach(() => {
@@ -19,33 +21,29 @@ function renderApp(client: QueryClient, path = "/") {
   );
 }
 
-function sessionsResponse() {
-  return new Response(
-    JSON.stringify({
-      total_unfiltered: 5,
-      total: 3,
-      sessions: [
-        {
-          session_id: "1",
-          install_id: "install",
-          player_name: "Ada",
-          build_version: "0.3.1",
-          build_commit: null,
-          wall_time_s: 3675,
-          sim_time_s: 30_000_000,
-          goals: ["G1"],
-          last_goal: "G1",
-          dev: false,
-          event_count: 15,
-          ended: true,
-        },
-      ],
-    }),
-  );
-}
+const SESSIONS_FIXTURE: SessionsResponse = {
+  total_unfiltered: 5,
+  total: 3,
+  sessions: [
+    {
+      session_id: "1",
+      install_id: "install",
+      player_name: "Ada",
+      build_version: "0.3.1",
+      build_commit: null,
+      wall_time_s: 3675,
+      sim_time_s: 30_000_000,
+      goals: ["G1"],
+      last_goal: "G1",
+      dev: false,
+      event_count: 15,
+      ended: true,
+    },
+  ],
+};
 
 test("shows the sessions list on the index route", async () => {
-  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(sessionsResponse()));
+  stubSessionsApi(SESSIONS_FIXTURE);
 
   renderApp(new QueryClient());
 

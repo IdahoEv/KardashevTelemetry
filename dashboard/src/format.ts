@@ -12,6 +12,10 @@ export function formatSimTime(seconds: number | null): string {
   return `${days.toFixed(1)} days`;
 }
 
+export function formatPercent(rate: number): string {
+  return `${Math.round(rate * 100)}%`;
+}
+
 export interface BuildLabel {
   label: string;
   title?: string;

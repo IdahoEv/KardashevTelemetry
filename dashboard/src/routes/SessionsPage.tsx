@@ -7,6 +7,7 @@ import { DataTable, type Column, type SortState } from "../components/DataTable"
 import { EmptyState, ErrorState, LoadingState } from "../components/states";
 import { formatBuild, formatSimTime, formatWallTime } from "../format";
 import { SessionFilterBar } from "../sessions/SessionFilterBar";
+import { StatsPanel } from "../sessions/StatsPanel";
 import {
   compareNullableText,
   compareSessionBuilds,
@@ -118,6 +119,7 @@ export function SessionsPage() {
         buildOptions={buildOptions}
         goalOptions={goalOptions}
       />
+      <StatsPanel filters={filters} />
       {isPending && <LoadingState label="Loading sessions…" />}
       {error && <ErrorState title="Couldn't load sessions" detail={error.message} />}
       {data && !error && (
