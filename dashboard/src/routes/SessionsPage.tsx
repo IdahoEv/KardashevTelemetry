@@ -1,21 +1,20 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import {
-  DEFAULT_SESSION_FILTERS,
-  fetchSessions,
-  type SessionSummary,
-} from "../api";
+import { fetchSessions, type SessionSummary } from "../api";
 import { Card } from "../components/Card";
 import { DataTable, type Column, type SortState } from "../components/DataTable";
 import { EmptyState, ErrorState, LoadingState } from "../components/states";
 import { formatSimTime, formatWallTime } from "../format";
+import { SessionFilterBar } from "../sessions/SessionFilterBar";
 import {
   compareBuilds,
   compareNullableText,
   compareSimTime,
   sortSessionsDefault,
 } from "../sessions/sorting";
+import { useSessionFilterOptions } from "../sessions/useSessionFilterOptions";
+import { useSessionFilters } from "../sessions/useSessionFilters";
 import "./pages.css";
 import "./SessionsPage.css";
 
@@ -81,10 +80,14 @@ function columnIsNumeric(key: string): boolean {
 }
 
 export function SessionsPage() {
+  const { filters, hasActiveFilters, setDev, setName, toggleBuild, toggleReached, clear } =
+    useSessionFilters();
   const { data, error, isPending } = useQuery({
-    queryKey: ["sessions"],
-    queryFn: () => fetchSessions(DEFAULT_SESSION_FILTERS),
+    queryKey: ["sessions", filters],
+    queryFn: () => fetchSessions(filters),
+    placeholderData: keepPreviousData,
   });
+  const { buildOptions, goalOptions } = useSessionFilterOptions();
   const [sort, setSort] = useState<SortState | null>(null);
 
   const rows = useMemo(() => {
@@ -108,10 +111,21 @@ export function SessionsPage() {
   return (
     <div className="page">
       <h1>Sessions</h1>
+      <SessionFilterBar
+        filters={filters}
+        hasActiveFilters={hasActiveFilters}
+        onDevChange={setDev}
+        onNameCommit={setName}
+        onBuildToggle={toggleBuild}
+        onGoalToggle={toggleReached}
+        onClear={clear}
+        buildOptions={buildOptions}
+        goalOptions={goalOptions}
+      />
       {isPending && <LoadingState label="Loading sessions…" />}
       {error && <ErrorState title="Couldn't load sessions" detail={error.message} />}
-      {data &&
-        (data.total_unfiltered === 0 ? (
+      {data && !error && (
+        data.total_unfiltered === 0 ? (
           <EmptyState title="No sessions yet" hint="Ingest a session file and refresh." />
         ) : (
           <>
@@ -119,10 +133,17 @@ export function SessionsPage() {
               {data.total} of {data.total_unfiltered} sessions
             </p>
             {data.total === 0 ? (
-              <EmptyState
-                title="No sessions to show"
-                hint="Dev builds are excluded by default."
-              />
+              hasActiveFilters ? (
+                <EmptyState
+                  title="No sessions match these filters"
+                  hint="Try clearing or widening the filters."
+                />
+              ) : (
+                <EmptyState
+                  title="No sessions to show"
+                  hint="Dev builds are excluded by default."
+                />
+              )
             ) : (
               <Card title="Sessions">
                 <DataTable
@@ -136,7 +157,8 @@ export function SessionsPage() {
               </Card>
             )}
           </>
-        ))}
+        )
+      )}
     </div>
   );
 }

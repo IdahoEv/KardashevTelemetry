@@ -3,6 +3,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, expect, test, vi } from "vitest";
 import type { SessionSummary, SessionsResponse } from "../api";
+import { stubSessionsApi } from "../test/mocks";
 import { SessionsPage } from "./SessionsPage";
 
 afterEach(() => {
@@ -73,14 +74,18 @@ function failingClient(): QueryClient {
   return new QueryClient({ defaultOptions: { queries: { retry: false } } });
 }
 
-function renderPage(client: QueryClient = new QueryClient()) {
+function renderPage(client: QueryClient = new QueryClient(), initialUrl = "/") {
   render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[initialUrl]}>
         <SessionsPage />
       </MemoryRouter>
     </QueryClientProvider>,
   );
+}
+
+function requestedUrls(fetchMock: ReturnType<typeof stubSessionsApi>): string[] {
+  return fetchMock.mock.calls.map(([input]) => String(input));
 }
 
 function rowNames(): string[] {
@@ -101,7 +106,9 @@ test("shows the count line and formatted rows from the API", async () => {
   expect(screen.getByText("347.2 days")).toBeTruthy();
   expect(screen.getByText("1.0 days")).toBeTruthy();
   expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(2);
-  expect(screen.getByText("abc1234").getAttribute("title")).toBe("abc1234567");
+  expect(screen.getAllByText("abc1234").map((el) => el.getAttribute("title"))).toContain(
+    "abc1234567",
+  );
 });
 
 test("orders rows by build desc then wall time desc by default", async () => {
@@ -206,4 +213,89 @@ test("keeps the count line when every session is filtered out", async () => {
   expect(await screen.findByText("0 of 2 sessions")).toBeTruthy();
   expect(screen.getByText(/dev builds are excluded/i)).toBeTruthy();
   expect(screen.queryByText("No sessions yet")).toBeNull();
+});
+
+test("requests the API with filters read from the URL", async () => {
+  const fetchMock = stubSessionsApi(FIXTURE);
+
+  renderPage(new QueryClient(), "/?dev=only&build=0.3.1&build=0.3.2");
+
+  await screen.findByText("3 of 5 sessions");
+  expect(requestedUrls(fetchMock)).toContain("/api/sessions?dev=only&build=0.3.1&build=0.3.2");
+});
+
+test("reloads with the name filter and pre-fills the search input", async () => {
+  const fetchMock = stubSessionsApi(FIXTURE);
+
+  renderPage(new QueryClient(), "/?name=ev");
+
+  await screen.findByText("3 of 5 sessions");
+  expect(requestedUrls(fetchMock)).toContain("/api/sessions?name=ev");
+  expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe("ev");
+});
+
+test("updates the count line from a filtered response", async () => {
+  stubSessionsApi(FIXTURE, { ...FIXTURE, total: 1, sessions: [FIXTURE.sessions[0]] });
+
+  renderPage(new QueryClient(), "/?name=Ada");
+
+  expect(await screen.findByText("1 of 5 sessions")).toBeTruthy();
+});
+
+test("refetches when a build checkbox is toggled", async () => {
+  const fetchMock = stubSessionsApi(
+    FIXTURE,
+    { ...FIXTURE, total: 1, sessions: [FIXTURE.sessions[0]] },
+  );
+
+  renderPage();
+
+  await screen.findByText("3 of 5 sessions");
+  fireEvent.click(screen.getByLabelText("0.3.2"));
+
+  expect(await screen.findByText("1 of 5 sessions")).toBeTruthy();
+  expect(requestedUrls(fetchMock)).toContain("/api/sessions?build=0.3.2");
+});
+
+test("refetches when the dev mode changes", async () => {
+  const fetchMock = stubSessionsApi(
+    FIXTURE,
+    { ...FIXTURE, total: 2, sessions: FIXTURE.sessions.slice(0, 2) },
+  );
+
+  renderPage();
+
+  await screen.findByText("3 of 5 sessions");
+  fireEvent.click(screen.getByLabelText("Only"));
+
+  expect(await screen.findByText("2 of 5 sessions")).toBeTruthy();
+  expect(requestedUrls(fetchMock)).toContain("/api/sessions?dev=only");
+});
+
+test("renders build and goal options from the unfiltered data", async () => {
+  stubSessionsApi(FIXTURE);
+
+  renderPage();
+
+  await screen.findByText("3 of 5 sessions");
+  expect((screen.getByLabelText("0.3.1") as HTMLInputElement).checked).toBe(false);
+  expect(screen.getByLabelText("0.3.2")).toBeTruthy();
+  expect(screen.getByLabelText("abc1234")).toBeTruthy();
+  expect(screen.getByLabelText("G1")).toBeTruthy();
+  expect(screen.getByLabelText("G2")).toBeTruthy();
+});
+
+test("shows a filtered empty state and clears filters on demand", async () => {
+  const fetchMock = stubSessionsApi(FIXTURE, { ...FIXTURE, total: 0, sessions: [] });
+
+  renderPage(new QueryClient(), "/?name=zz");
+
+  expect(await screen.findByText("No sessions match these filters")).toBeTruthy();
+  expect(screen.getByText("0 of 5 sessions")).toBeTruthy();
+  expect(screen.queryByText("No sessions to show")).toBeNull();
+
+  fireEvent.click(screen.getByRole("button", { name: /clear filters/i }));
+
+  expect(await screen.findByText("3 of 5 sessions")).toBeTruthy();
+  expect(requestedUrls(fetchMock)).toContain("/api/sessions");
 });
