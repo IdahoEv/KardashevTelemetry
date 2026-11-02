@@ -1,4 +1,3 @@
-import re
 from dataclasses import dataclass
 
 import duckdb
@@ -13,7 +12,8 @@ _COLUMNS = (
 
 _SUMMARY_SQL = f"""
 with e as (
-    select * from read_json(?, columns = {_COLUMNS}, format = 'newline_delimited')
+    select * from read_json(?, columns = {_COLUMNS}, format = 'newline_delimited', ignore_errors = true)
+    where session_id is not null
     qualify row_number() over (partition by session_id, seq order by t_ms) = 1
 )
 select
@@ -76,13 +76,9 @@ def _summarize(row, dev):
         wall_time_s=wall,
         sim_time_s=sim,
         goals=goals,
-        last_goal=max(goals, key=_goal_rank, default=None),
+        last_goal=goals[-1] if goals else None,
         dev=dev,
         event_count=count,
         ended=bool(ended),
     )
 
-
-def _goal_rank(goal_id):
-    digits = re.search(r"\d+", goal_id)
-    return (int(digits.group()) if digits else -1, goal_id)

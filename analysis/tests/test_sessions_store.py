@@ -64,8 +64,15 @@ def test_duplicate_copies_of_a_session_are_deduplicated(make_data_dir):
     assert sessions[0].event_count == 15
 
 
-def test_highest_goal_is_numeric_not_lexical(make_data_dir):
+def test_last_goal_is_the_last_reached_not_the_highest_id(make_data_dir):
     data_dir = make_data_dir(sessions=["session_normal.jsonl"])
     path = data_dir / "sessions" / "session_normal.jsonl"
-    path.write_text(path.read_text().replace('"G2"', '"G10"'))
-    assert load_sessions(data_dir)[0].last_goal == "G10"
+    path.write_text(path.read_text().replace('"G2"', '"A0"'))
+    assert load_sessions(data_dir)[0].last_goal == "A0"
+
+
+def test_truncated_line_does_not_fail_the_load(make_data_dir):
+    data_dir = make_data_dir(sessions=["session_normal.jsonl", "session_stalled.jsonl"])
+    path = data_dir / "sessions" / "session_stalled.jsonl"
+    path.write_text(path.read_text() + '{"session_id": "cut", "se')
+    assert len(load_sessions(data_dir)) == 2
