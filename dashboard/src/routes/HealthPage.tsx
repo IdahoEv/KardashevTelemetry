@@ -10,7 +10,7 @@ export function HealthPage() {
 
   return (
     <div className="page">
-      <h1>Overview</h1>
+      <h1>Health</h1>
       {isPending && <LoadingState />}
       {error && <ErrorState title="API unreachable" detail={error.message} />}
       {data && (

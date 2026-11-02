@@ -8,7 +8,8 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: "/", label: "Overview" },
+  { to: "/", label: "Sessions" },
+  { to: "/health", label: "Health" },
   ...(import.meta.env.DEV ? [{ to: "/styleguide", label: "Styleguide" }] : []),
 ];
 
