@@ -1,4 +1,4 @@
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 
 from kardashev_analysis import sessions_store
@@ -18,6 +18,13 @@ def create_app(data_dir, dist_dir=None):
         everything = sessions_store.load_sessions(data_dir)
         selected = [s.row() for s in everything if matches(s, filters)]
         return {"total_unfiltered": len(everything), "total": len(selected), "sessions": selected}
+
+    @app.get("/api/sessions/{session_id}")
+    def session_detail(session_id: str):
+        detail = sessions_store.load_session_detail(data_dir, session_id)
+        if detail is None:
+            raise HTTPException(status_code=404, detail="unknown session_id")
+        return detail.row()
 
     @app.get("/api/stats")
     def stats(filters: SessionFilters = Depends(session_filters)):

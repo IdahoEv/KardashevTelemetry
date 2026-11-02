@@ -51,18 +51,18 @@ def test_time_to_goal_covers_build_without_tick_stamp(sessions, tmp_path):
 def test_session_length(sessions):
     columns, rows = tel.run_query("session_length", sessions)
     assert columns == ["session_id", "length_s", "events"]
-    assert rows == [(S1, 22.5, 15), (S2, 7.5, 5), (S3, 7.5, 5)]
+    assert rows == [(S1, 22.5, 16), (S2, 7.5, 5), (S3, 7.5, 5)]
 
 
 def test_event_counts(sessions):
     columns, rows = tel.run_query("event_counts", sessions)
     assert columns == ["event", "count"]
     assert rows[:5] == [
-        ("building_placed", 4), ("milestone_reached", 4), ("session_start", 3),
+        ("building_placed", 5), ("milestone_reached", 4), ("session_start", 3),
         ("building_stalled", 2), ("session_end", 2),
     ]
     assert dict(rows)["unhandled_exception"] == 1
-    assert sum(count for _, count in rows) == 25
+    assert sum(count for _, count in rows) == 26
 
 
 def test_stalls_per_session(sessions):

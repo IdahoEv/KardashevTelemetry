@@ -36,6 +36,16 @@ group by session_id
 order by session_id
 """
 
+# Envelope sim_time_s, never props.ticked_time_s: only the envelope field exists on every build.
+_BUILDINGS_SQL = f"""
+with e as (
+    select * from read_json(?, columns = {_COLUMNS}, format = 'newline_delimited', ignore_errors = true)
+    where session_id = ? and event = 'building_placed' and props ->> 'building_type' is not null
+    qualify row_number() over (partition by session_id, seq order by t_ms) = 1
+)
+select sim_time_s, props ->> 'building_type' as building_type from e order by seq
+"""
+
 
 @dataclass(frozen=True)
 class SessionSummary:
@@ -61,12 +71,35 @@ class SessionSummary:
 _STATS_ONLY_FIELDS = {"stall_count", "goal_times"}
 
 
+@dataclass(frozen=True)
+class SessionDetail:
+    summary: SessionSummary
+    buildings: dict
+
+    def row(self):
+        s = self.summary
+        return {
+            **s.row(),
+            "goal_times": [{"goal": g, "sim_time_s": s.goal_times[g]} for g in s.goals if g in s.goal_times],
+            "buildings": self.buildings,
+        }
+
+
 def count_sessions(data_dir):
     return sum(1 for _ in (data_dir / "sessions").glob("*.jsonl"))
 
 
 def load_sessions(data_dir):
     return _load_dir(data_dir / "sessions", dev=False) + _load_dir(data_dir / "dev_sessions", dev=True)
+
+
+def load_session_detail(data_dir, session_id):
+    summary = next((s for s in load_sessions(data_dir) if s.session_id == session_id), None)
+    if summary is None:
+        return None
+    rows = _load_building_rows(data_dir / "sessions", session_id)
+    rows += _load_building_rows(data_dir / "dev_sessions", session_id)
+    return SessionDetail(summary=summary, buildings=_buildings_series(rows))
 
 
 def _load_dir(directory, dev):
@@ -99,4 +132,22 @@ def _summarize(row, dev):
         stall_count=stalls,
         goal_times=goal_times,
     )
+
+
+def _load_building_rows(directory, session_id):
+    if not any(directory.glob("*.jsonl")):
+        return []
+    return duckdb.connect().execute(_BUILDINGS_SQL, [str(directory / "*.jsonl"), session_id]).fetchall()
+
+
+def _buildings_series(rows):
+    types = []
+    counts = {}
+    series = []
+    for sim_time_s, building_type in rows:
+        if building_type not in counts:
+            types.append(building_type)
+        counts[building_type] = counts.get(building_type, 0) + 1
+        series.append({"sim_time_s": sim_time_s, "counts": dict(counts)})
+    return {"types": types, "series": series}
 
