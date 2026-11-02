@@ -3,14 +3,21 @@ name = "kardashev-telemetry"
 version = "0.1.0"
 description = "Analysis of Kardashev playtest telemetry sessions"
 requires-python = ">=3.12"
-dependencies = ["duckdb"]
+dependencies = [
+    "duckdb",
+    "fastapi>=0.162.0",
+    "uvicorn>=0.54.0",
+]
 
 [project.scripts]
 kardashev-analysis = "kardashev_analysis.cli:main"
 tel = "kardashev_analysis.tel:main"
 
 [dependency-groups]
-dev = ["pytest"]
+dev = [
+    "httpx>=0.28.1",
+    "pytest",
+]
 
 [build-system]
 requires = ["hatchling"]

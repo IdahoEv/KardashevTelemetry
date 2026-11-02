@@ -20,6 +20,42 @@ def test_fetch_without_channel_exits_nonzero(tmp_path, monkeypatch, capsys):
     assert "DISCORD_CHANNEL_ID" in capsys.readouterr().err
 
 
+def _capture_serve(monkeypatch):
+    calls = {}
+    monkeypatch.setattr(cli.uvicorn, "run", lambda app, host, port: calls.update(app=app, host=host, port=port))
+    return calls
+
+
+def test_serve_defaults_to_loopback_8000(monkeypatch):
+    calls = _capture_serve(monkeypatch)
+    assert cli.main(["serve"]) == 0
+    assert (calls["host"], calls["port"]) == ("127.0.0.1", 8000)
+
+
+def test_serve_flags_override(tmp_path, monkeypatch):
+    calls = _capture_serve(monkeypatch)
+    assert cli.main(["serve", "--host", "0.0.0.0", "--port", "9001", "--data-dir", str(tmp_path)]) == 0
+    assert (calls["host"], calls["port"]) == ("0.0.0.0", 9001)
+
+
+def test_serve_uses_data_dir_given_after_subcommand(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    calls = _capture_serve(monkeypatch)
+    (tmp_path / "sessions").mkdir()
+    shutil.copy(FIXTURES / "session_normal.jsonl", tmp_path / "sessions" / "a.jsonl")
+    cli.main(["serve", "--data-dir", str(tmp_path)])
+    assert TestClient(calls["app"]).get("/api/health").json()["session_count"] == 1
+
+
+def test_serve_uses_top_level_data_dir(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    calls = _capture_serve(monkeypatch)
+    cli.main(["--data-dir", str(tmp_path), "serve"])
+    assert TestClient(calls["app"]).get("/api/health").json()["session_count"] == 0
+
+
 def test_ingest_prints_counts(tmp_path, capsys):
     raw = tmp_path / "raw"
     raw.mkdir()
