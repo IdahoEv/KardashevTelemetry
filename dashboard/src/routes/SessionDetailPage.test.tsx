@@ -73,7 +73,7 @@ test("renders the header, goal table, timeline, and chart slot from the API", as
   expect(Number.parseFloat((marks[1] as HTMLElement).style.left)).toBeCloseTo(100, 0);
   expect(marks[0].getAttribute("title")).toContain("G1");
 
-  expect(screen.getByText("Buildings chart coming soon")).toBeTruthy();
+  expect(screen.getByRole("img").getAttribute("aria-label")).toContain("1 building");
   expect(document.querySelector("[data-slot='buildings-chart']")).toBeTruthy();
 });
 

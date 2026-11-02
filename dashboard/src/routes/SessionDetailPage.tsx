@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import { fetchSessionDetail } from "../api";
 import { Badge } from "../components/Badge";
+import { BuildingsChart } from "../charts/BuildingsChart";
 import { Card } from "../components/Card";
 import { DataTable, type Column } from "../components/DataTable";
 import { EmptyState, ErrorState, LoadingState } from "../components/states";
@@ -120,13 +121,8 @@ export function SessionDetailPage() {
         )}
       </Card>
       <Card title="Buildings">
-        {/* Buildings chart mounts here, consuming detail.buildings
-            ({ types, series }) with charts/chartTheme.ts + Recharts. */}
         <div data-slot="buildings-chart">
-          <EmptyState
-            title="Buildings chart coming soon"
-            hint="Built structures over sim time is coming."
-          />
+          <BuildingsChart buildings={data.buildings} goalTimes={goalTimes} />
         </div>
       </Card>
     </div>
