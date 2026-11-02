@@ -21,3 +21,15 @@ test("shows the health result from the API", async () => {
 
   expect(await screen.findByText(/API ok · 3 sessions/)).toBeTruthy();
 });
+
+test("shows an alert when the API responds with an error", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 500 })));
+
+  render(
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <App />
+    </QueryClientProvider>,
+  );
+
+  expect((await screen.findByRole("alert")).textContent).toContain("API unreachable");
+});

@@ -56,6 +56,18 @@ def test_serve_uses_top_level_data_dir(tmp_path, monkeypatch):
     assert TestClient(calls["app"]).get("/api/health").json()["session_count"] == 0
 
 
+def test_serve_serves_the_dashboard_dist(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    calls = _capture_serve(monkeypatch)
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "index.html").write_text("<html>dash</html>")
+    monkeypatch.setattr(cli, "DASHBOARD_DIST", dist)
+    cli.main(["--data-dir", str(tmp_path), "serve"])
+    assert "dash" in TestClient(calls["app"]).get("/").text
+
+
 def test_ingest_prints_counts(tmp_path, capsys):
     raw = tmp_path / "raw"
     raw.mkdir()
