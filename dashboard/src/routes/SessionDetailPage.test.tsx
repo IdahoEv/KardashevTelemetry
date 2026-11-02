@@ -97,6 +97,15 @@ test("shows an empty state for a session with no goals", async () => {
   expect(document.querySelectorAll("tbody tr")).toHaveLength(0);
 });
 
+test("renders an unnamed heading with muted styling when player_name is null", async () => {
+  stubSessionDetailApi(detail({ player_name: null }));
+
+  renderPage();
+
+  const heading = await screen.findByRole("heading", { name: "Unnamed" });
+  expect(heading.className).toContain("session-detail__name--unnamed");
+});
+
 test("shows a not-found state on a 404", async () => {
   stubSessionDetailApi(null);
 

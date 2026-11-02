@@ -90,7 +90,7 @@ export function SessionDetailPage() {
     <div className="page session-detail">
       <div className="session-detail__header">
         {backLink}
-        <h1 className={data.player_name ? undefined : "sessions-link--unnamed"}>
+        <h1 className={data.player_name ? undefined : "session-detail__name--unnamed"}>
           {data.player_name ?? "Unnamed"}
         </h1>
         <div className="session-detail__meta">
@@ -120,12 +120,12 @@ export function SessionDetailPage() {
         )}
       </Card>
       <Card title="Buildings">
-        {/* Is25: buildings chart mounts here, consuming detail.buildings
+        {/* Buildings chart mounts here, consuming detail.buildings
             ({ types, series }) with charts/chartTheme.ts + Recharts. */}
         <div data-slot="buildings-chart">
           <EmptyState
             title="Buildings chart coming soon"
-            hint="Built structures over sim time arrives in Is25."
+            hint="Built structures over sim time is coming."
           />
         </div>
       </Card>

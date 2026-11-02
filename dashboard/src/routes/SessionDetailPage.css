@@ -12,6 +12,10 @@
   font-size: var(--text-sm);
 }
 
+.session-detail__name--unnamed {
+  color: var(--text-muted);
+}
+
 .session-detail__meta {
   display: flex;
   flex-wrap: wrap;
