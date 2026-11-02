@@ -16,6 +16,7 @@ S3 = "11111111-0000-4000-8000-000000000003"
 A1 = "00000000-0000-4000-8000-00000000a001"
 A2 = "00000000-0000-4000-8000-00000000a002"
 A3 = "00000000-0000-4000-8000-00000000a003"
+A4 = "00000000-0000-4000-8000-00000000a004"
 
 
 @pytest.fixture
@@ -33,12 +34,18 @@ def test_list_queries_finds_every_sql_file():
 
 def test_time_to_goal(sessions):
     columns, rows = tel.run_query("time_to_goal", sessions)
-    assert columns == ["install_id", "milestone_id", "ticked_time_s"]
+    assert columns == ["install_id", "milestone_id", "time_to_goal_s"]
     assert rows == [
-        (A1, "G1", 5000.0), (A1, "G2", 12000.0),
+        (A1, "G1", 5400.0), (A1, "G2", 12000.0),
         (A2, "G1", 2000.0),
         (A3, "G1", 4000.0),
     ]
+
+
+def test_time_to_goal_covers_build_without_tick_stamp(sessions, tmp_path):
+    shutil.copy(FIXTURES / "session_old_build.jsonl", tmp_path / "session_old_build.jsonl")
+    _, rows = tel.run_query("time_to_goal", sessions)
+    assert (A4, "G1", 7000.0) in rows
 
 
 def test_session_length(sessions):

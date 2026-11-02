@@ -41,7 +41,7 @@ uv run kardashev-analysis ingest  # data/raw -> data/sessions/<session_id>.jsonl
 
 | Query | Answers |
 |---|---|
-| `time_to_goal` | Earliest `ticked_time_s` of each `milestone_reached`, per install |
+| `time_to_goal` | Earliest `elapsed_sim_time_s` of each `milestone_reached`, per install, as `time_to_goal_s`. Used instead of `ticked_time_s` because every build stamps it (`ticked_time_s` only from M2.1) and it is the player-visible sim clock, including time dropped by the frame cap. Used even when both are present, so builds stay comparable; the two can differ by about two ticks |
 | `session_length` | Length in seconds (`max(t_ms)`) and event count, per session |
 | `event_counts` | Events by type |
 | `stalls_per_session` | `building_stalled` count, per session |
@@ -63,6 +63,7 @@ uv run kardashev-analysis ingest  # data/raw -> data/sessions/<session_id>.jsonl
 | `session_dev.jsonl` | `dev_session` flips true at `dev_cheat_used` |
 | `session_stalled.jsonl` | Two `building_stalled`, G1, no `session_end` |
 | `session_normal_early.jsonl` | Shorter earlier upload of `session_normal` (same session, cut at G1) |
+| `session_old_build.jsonl` | Older build: `milestone_reached` has `elapsed_sim_time_s` but no `tick` / `ticked_time_s` |
 
 ## CI
 
