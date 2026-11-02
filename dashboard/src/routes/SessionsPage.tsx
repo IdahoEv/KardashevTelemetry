@@ -72,7 +72,8 @@ const comparators: Record<string, (a: SessionSummary, b: SessionSummary) => numb
   wallTime: (a, b) => a.wall_time_s - b.wall_time_s,
   simTime: (a, b) => compareSimTime(a.sim_time_s, b.sim_time_s),
   lastGoal: (a, b) => compareNullableText(a.last_goal, b.last_goal),
-  build: (a, b) => compareBuilds(a.build_version, b.build_version),
+  build: (a, b) =>
+    compareBuilds(a.build_version ?? a.build_commit, b.build_version ?? b.build_commit),
 };
 
 function columnIsNumeric(key: string): boolean {
@@ -110,23 +111,30 @@ export function SessionsPage() {
       {isPending && <LoadingState label="Loading sessions…" />}
       {error && <ErrorState title="Couldn't load sessions" detail={error.message} />}
       {data &&
-        (data.total === 0 ? (
+        (data.total_unfiltered === 0 ? (
           <EmptyState title="No sessions yet" hint="Ingest a session file and refresh." />
         ) : (
           <>
             <p className="sessions-count">
               {data.total} of {data.total_unfiltered} sessions
             </p>
-            <Card title="Sessions">
-              <DataTable
-                caption="Sessions"
-                columns={columns}
-                rows={rows}
-                rowKey={(row) => row.session_id}
-                sort={sort}
-                onSortToggle={handleSortToggle}
+            {data.total === 0 ? (
+              <EmptyState
+                title="No sessions to show"
+                hint="Dev builds are excluded by default."
               />
-            </Card>
+            ) : (
+              <Card title="Sessions">
+                <DataTable
+                  caption="Sessions"
+                  columns={columns}
+                  rows={rows}
+                  rowKey={(row) => row.session_id}
+                  sort={sort}
+                  onSortToggle={handleSortToggle}
+                />
+              </Card>
+            )}
           </>
         ))}
     </div>

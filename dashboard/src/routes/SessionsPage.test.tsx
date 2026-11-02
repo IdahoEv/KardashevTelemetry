@@ -132,6 +132,36 @@ test("sorts by name ascending on header click, nulls first", async () => {
   expect(rowNames()).toEqual(["Unnamed", "Ada", "Grace"]);
 });
 
+test("flips sort direction on a second header click, nulls last descending", async () => {
+  stubSessionsResponse(FIXTURE);
+
+  renderPage();
+
+  const nameHeader = await screen.findByRole("button", { name: /name/i });
+  fireEvent.click(nameHeader);
+  expect(rowNames()).toEqual(["Unnamed", "Ada", "Grace"]);
+  fireEvent.click(nameHeader);
+  expect(rowNames()).toEqual(["Grace", "Ada", "Unnamed"]);
+});
+
+test("sorts the build column by version, then commit, then unknown", async () => {
+  stubSessionsResponse({
+    total_unfiltered: 4,
+    total: 4,
+    sessions: [
+      summary({ session_id: "1", player_name: "Unknown", build_version: null, build_commit: null }),
+      summary({ session_id: "2", player_name: "Commit", build_version: null, build_commit: "abc1234567" }),
+      summary({ session_id: "3", player_name: "New", build_version: "0.3.2" }),
+      summary({ session_id: "4", player_name: "Old", build_version: "0.3.1" }),
+    ],
+  });
+
+  renderPage();
+
+  fireEvent.click(await screen.findByRole("button", { name: /build/i }));
+  expect(rowNames()).toEqual(["Unknown", "Old", "New", "Commit"]);
+});
+
 test("sorts numeric columns descending first on header click", async () => {
   stubSessionsResponse(FIXTURE);
 
@@ -166,4 +196,14 @@ test("shows an empty state when there are no sessions", async () => {
   renderPage();
 
   expect(await screen.findByText("No sessions yet")).toBeTruthy();
+});
+
+test("keeps the count line when every session is filtered out", async () => {
+  stubSessionsResponse({ total_unfiltered: 2, total: 0, sessions: [] });
+
+  renderPage();
+
+  expect(await screen.findByText("0 of 2 sessions")).toBeTruthy();
+  expect(screen.getByText(/dev builds are excluded/i)).toBeTruthy();
+  expect(screen.queryByText("No sessions yet")).toBeNull();
 });
