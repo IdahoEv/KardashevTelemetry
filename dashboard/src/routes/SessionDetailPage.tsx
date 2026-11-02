@@ -67,7 +67,6 @@ export function SessionDetailPage() {
   if (error) {
     return (
       <div className="page">
-        {backLink}
         <ErrorState title="Couldn't load session" detail={error.message} action={backLink} />
       </div>
     );
@@ -76,7 +75,6 @@ export function SessionDetailPage() {
   if (data === null || data === undefined) {
     return (
       <div className="page">
-        {backLink}
         <EmptyState
           title="Session not found"
           hint="This session doesn't exist in the store."

@@ -104,6 +104,7 @@ test("shows a not-found state on a 404", async () => {
 
   expect(await screen.findByText("Session not found")).toBeTruthy();
   expect(screen.queryByRole("alert")).toBeNull();
+  expect(screen.getAllByRole("link", { name: /back to sessions/i })).toHaveLength(1);
 });
 
 test("shows an error state on a failed request", async () => {
@@ -112,6 +113,7 @@ test("shows an error state on a failed request", async () => {
   renderPage(failingClient());
 
   expect((await screen.findByRole("alert")).textContent).toContain("Couldn't load session");
+  expect(screen.getAllByRole("link", { name: /back to sessions/i })).toHaveLength(1);
 });
 
 test("back link carries the list filters", async () => {
