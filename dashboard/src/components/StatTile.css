@@ -23,6 +23,10 @@
   letter-spacing: -0.02em;
 }
 
+.stat-tile__note {
+  font-size: var(--text-sm);
+}
+
 .stat-tile__delta {
   display: inline-flex;
   align-items: center;

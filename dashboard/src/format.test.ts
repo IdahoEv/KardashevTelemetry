@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { formatBuild, formatSimTime, formatWallTime } from "./format";
+import { formatBuild, formatPercent, formatSimTime, formatWallTime } from "./format";
 
 describe("formatWallTime", () => {
   test("formats zero", () => {
@@ -30,6 +30,18 @@ describe("formatSimTime", () => {
 
   test("formats tens of millions of seconds", () => {
     expect(formatSimTime(30_000_000)).toBe("347.2 days");
+  });
+});
+
+describe("formatPercent", () => {
+  test("formats zero and one", () => {
+    expect(formatPercent(0)).toBe("0%");
+    expect(formatPercent(1)).toBe("100%");
+  });
+
+  test("rounds to whole percent", () => {
+    expect(formatPercent(1 / 3)).toBe("33%");
+    expect(formatPercent(2 / 3)).toBe("67%");
   });
 });
 
