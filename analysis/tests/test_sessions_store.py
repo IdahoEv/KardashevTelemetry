@@ -1,6 +1,6 @@
 from conftest import S1, S2, S3, S4
 
-from kardashev_analysis.sessions_store import load_sessions
+from kardashev_analysis.sessions_store import load_session_detail, load_sessions
 
 
 def _by_id(data_dir):
@@ -25,7 +25,7 @@ def test_named_session_summary(full_data_dir):
     assert s.wall_time_s == 22.5
     assert s.goals == ["G1", "G2"]
     assert s.last_goal == "G2"
-    assert s.event_count == 15
+    assert s.event_count == 16
     assert s.ended is True
 
 
@@ -73,7 +73,7 @@ def test_duplicate_copies_of_a_session_are_deduplicated(make_data_dir):
     data_dir = make_data_dir(sessions=["session_normal.jsonl", "session_normal_early.jsonl"])
     sessions = load_sessions(data_dir)
     assert len(sessions) == 1
-    assert sessions[0].event_count == 15
+    assert sessions[0].event_count == 16
 
 
 def test_last_goal_is_the_last_reached_not_the_highest_id(make_data_dir):
@@ -91,7 +91,7 @@ def test_milestone_without_an_id_is_skipped(make_data_dir):
     assert s.goals == ["G1"]
     assert s.last_goal == "G1"
     assert s.goal_times == {"G1": 5400.0}
-    assert s.event_count == 15
+    assert s.event_count == 16
 
 
 def test_truncated_line_does_not_fail_the_load(make_data_dir):
@@ -99,3 +99,44 @@ def test_truncated_line_does_not_fail_the_load(make_data_dir):
     path = data_dir / "sessions" / "session_stalled.jsonl"
     path.write_text(path.read_text() + '{"session_id": "cut", "se')
     assert len(load_sessions(data_dir)) == 2
+
+
+def test_detail_buildings_series_counts_cumulatively(full_data_dir):
+    detail = load_session_detail(full_data_dir, S1)
+    assert detail.buildings == {
+        "types": ["mine", "factory"],
+        "series": [
+            {"sim_time_s": 3000.0, "counts": {"mine": 1}},
+            {"sim_time_s": 13000.0, "counts": {"mine": 1, "factory": 1}},
+            {"sim_time_s": 13500.0, "counts": {"mine": 2, "factory": 1}},
+        ],
+    }
+
+
+def test_detail_buildings_empty_for_old_build_session(full_data_dir):
+    detail = load_session_detail(full_data_dir, S4)
+    assert detail.buildings == {"types": [], "series": []}
+
+
+def test_detail_row_includes_goal_times_in_reached_order(full_data_dir):
+    detail = load_session_detail(full_data_dir, S1)
+    row = detail.row()
+    assert row["goal_times"] == [
+        {"goal": "G1", "sim_time_s": 5400.0},
+        {"goal": "G2", "sim_time_s": 12000.0},
+    ]
+    assert {k: v for k, v in row.items() if k not in ("goal_times", "buildings")} == detail.summary.row()
+
+
+def test_detail_unknown_id_returns_none(full_data_dir):
+    assert load_session_detail(full_data_dir, "nope") is None
+
+
+def test_detail_dedupes_duplicate_copies(make_data_dir):
+    data_dir = make_data_dir(sessions=["session_normal.jsonl", "session_normal_early.jsonl"])
+    detail = load_session_detail(data_dir, S1)
+    assert detail.buildings["series"] == [
+        {"sim_time_s": 3000.0, "counts": {"mine": 1}},
+        {"sim_time_s": 13000.0, "counts": {"mine": 1, "factory": 1}},
+        {"sim_time_s": 13500.0, "counts": {"mine": 2, "factory": 1}},
+    ]

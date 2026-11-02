@@ -57,7 +57,7 @@ def test_sessions_row_shape(full_data_dir):
         "goals": ["G1", "G2"],
         "last_goal": "G2",
         "dev": False,
-        "event_count": 15,
+        "event_count": 16,
         "ended": True,
     }
 
@@ -96,6 +96,70 @@ def test_sessions_empty_filter_values_are_ignored(full_data_dir):
 def test_sessions_rejects_unknown_dev_mode(full_data_dir):
     response = TestClient(create_app(full_data_dir)).get("/api/sessions?dev=bogus")
     assert response.status_code == 422
+
+
+def _detail(data_dir, session_id):
+    response = TestClient(create_app(data_dir)).get(f"/api/sessions/{session_id}")
+    assert response.status_code == 200
+    return response.json()
+
+
+def test_session_detail_row_shape(full_data_dir):
+    row = _detail(full_data_dir, "11111111-0000-4000-8000-000000000001")
+    assert row == {
+        "session_id": "11111111-0000-4000-8000-000000000001",
+        "install_id": "00000000-0000-4000-8000-00000000a001",
+        "player_name": "TestPilot",
+        "build_version": "0.3.1",
+        "build_commit": "abc1234",
+        "wall_time_s": 22.5,
+        "sim_time_s": row["sim_time_s"],
+        "goals": ["G1", "G2"],
+        "last_goal": "G2",
+        "dev": False,
+        "event_count": 16,
+        "ended": True,
+        "goal_times": [
+            {"goal": "G1", "sim_time_s": 5400.0},
+            {"goal": "G2", "sim_time_s": 12000.0},
+        ],
+        "buildings": {
+            "types": ["mine", "factory"],
+            "series": [
+                {"sim_time_s": 3000.0, "counts": {"mine": 1}},
+                {"sim_time_s": 13000.0, "counts": {"mine": 1, "factory": 1}},
+                {"sim_time_s": 13500.0, "counts": {"mine": 2, "factory": 1}},
+            ],
+        },
+    }
+
+
+def test_session_detail_matches_list_row(full_data_dir):
+    detail = _detail(full_data_dir, "11111111-0000-4000-8000-000000000001")
+    listed = next(
+        s for s in _sessions(full_data_dir, "?dev=include")["sessions"] if s["session_id"].endswith("1")
+    )
+    assert {k: v for k, v in detail.items() if k not in ("goal_times", "buildings")} == listed
+
+
+def test_session_detail_dev_session_reachable_by_id(full_data_dir):
+    detail = _detail(full_data_dir, "11111111-0000-4000-8000-000000000002")
+    assert detail["dev"] is True
+    assert detail["buildings"] == {
+        "types": ["mine"],
+        "series": [{"sim_time_s": 2000.0, "counts": {"mine": 1}}],
+    }
+
+
+def test_session_detail_old_build_session(full_data_dir):
+    detail = _detail(full_data_dir, "11111111-0000-4000-8000-000000000004")
+    assert detail["goal_times"] == [{"goal": "G1", "sim_time_s": 7000.0}]
+    assert detail["buildings"] == {"types": [], "series": []}
+
+
+def test_session_detail_unknown_id_is_404(full_data_dir):
+    response = TestClient(create_app(full_data_dir)).get("/api/sessions/nope")
+    assert response.status_code == 404
 
 
 def _stats(data_dir, query=""):
