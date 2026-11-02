@@ -91,6 +91,7 @@ def test_milestone_without_an_id_is_skipped(make_data_dir):
     assert s.goals == ["G1"]
     assert s.last_goal == "G1"
     assert s.goal_times == {"G1": 5400.0}
+    assert s.event_count == 15
 
 
 def test_truncated_line_does_not_fail_the_load(make_data_dir):
