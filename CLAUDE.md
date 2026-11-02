@@ -11,7 +11,7 @@ Analysis tooling (and later a GCP collector) for session telemetry emitted by th
 | `analysis/` | Python package: `src`, `tests` (+ `tests/fixtures/` synthetic sessions), `sql/` canned DuckDB queries |
 | `collector/` | FastAPI upload-policy service. Not yet created (Is5); own tests and CI job |
 | `docs/` | Design docs (e.g. `collector-design.md` from Is4) |
-| `data/` | Local session store. Gitignored |
+| `data/` | Local session store: `raw/`, `sessions/`, `dev_sessions/`. Gitignored |
 | `.scratch/` | Throwaway scripts and queries. Gitignored |
 
 ## Commands
@@ -20,7 +20,7 @@ Analysis tooling (and later a GCP collector) for session telemetry emitted by th
 uv sync                                  # install pinned deps
 uv run pytest -q                         # tests, quiet output
 uv run kardashev-analysis fetch          # Discord -> data/raw (needs DISCORD_BOT_TOKEN, DISCORD_CHANNEL_ID)
-uv run kardashev-analysis ingest         # data/raw -> data/sessions/<session_id>.jsonl
+uv run kardashev-analysis ingest         # data/raw -> data/sessions/<session_id>.jsonl (dev: data/dev_sessions/)
 uv run duckdb -readonly <db> -c "<sql>"  # read-only queries
 ```
 

@@ -8,13 +8,14 @@ from kardashev_analysis.ingest import ingest
 
 FIXTURES = Path(__file__).parent / "fixtures"
 NORMAL_ID = "11111111-0000-4000-8000-000000000001"
+DEV_ID = "11111111-0000-4000-8000-000000000002"
 
 
 @pytest.fixture
 def dirs(tmp_path):
-    raw, sessions = tmp_path / "raw", tmp_path / "sessions"
+    raw, sessions, dev = tmp_path / "raw", tmp_path / "sessions", tmp_path / "dev_sessions"
     raw.mkdir()
-    return raw, sessions
+    return raw, sessions, dev
 
 
 def put(raw, fixture, name):
@@ -26,58 +27,98 @@ def lines(path):
 
 
 def test_keeps_largest_copy_per_session(dirs):
-    raw, sessions = dirs
+    raw, sessions, dev = dirs
     put(raw, "session_normal_early.jsonl", "200_1.jsonl")
     put(raw, "session_normal.jsonl", "100_1.jsonl")
-    report = ingest(raw, sessions)
+    report = ingest(raw, sessions, dev)
     assert report.written == 1
     out = lines(sessions / f"{NORMAL_ID}.jsonl")
     assert len(out) == len(lines(FIXTURES / "session_normal.jsonl"))
 
 
 def test_tie_goes_to_highest_message_id(dirs):
-    raw, sessions = dirs
+    raw, sessions, dev = dirs
     put(raw, "session_normal.jsonl", "100_1.jsonl")
     (raw / "300_1.jsonl").write_text((FIXTURES / "session_normal.jsonl").read_text())
-    ingest(raw, sessions)
+    ingest(raw, sessions, dev)
     assert len(list(sessions.glob("*.jsonl"))) == 1
 
 
-def test_excludes_dev_sessions_and_counts_them(dirs):
-    raw, sessions = dirs
+def dev_events(is_dev):
+    events = lines(FIXTURES / "session_dev.jsonl")
+    for e in events:
+        e["dev_session"] = is_dev
+    return events
+
+
+def test_routes_dev_sessions_to_dev_dir(dirs):
+    raw, sessions, dev = dirs
     put(raw, "session_normal.jsonl", "100_1.jsonl")
     put(raw, "session_dev.jsonl", "101_1.jsonl")
-    report = ingest(raw, sessions)
-    assert (report.written, report.excluded_dev) == (1, 1)
+    report = ingest(raw, sessions, dev)
+    assert (report.written, report.written_dev) == (1, 1)
     assert [p.name for p in sessions.glob("*.jsonl")] == [f"{NORMAL_ID}.jsonl"]
+    assert [p.name for p in dev.glob("*.jsonl")] == [f"{DEV_ID}.jsonl"]
+
+
+def test_dev_sessions_are_deduped_and_ordered(dirs):
+    raw, sessions, dev = dirs
+    full = lines(FIXTURES / "session_dev.jsonl")
+    write_events(raw / "100_1.jsonl", full[::-1])
+    write_events(raw / "200_1.jsonl", full[:2])
+    ingest(raw, sessions, dev)
+    out = lines(dev / f"{DEV_ID}.jsonl")
+    assert len(out) == len(full)
+    assert [e["seq"] for e in out] == sorted(e["seq"] for e in out)
+
+
+def test_session_flipping_to_dev_leaves_sessions_dir(dirs):
+    raw, sessions, dev = dirs
+    write_events(raw / "100_1.jsonl", dev_events(False))
+    ingest(raw, sessions, dev)
+    assert (sessions / f"{DEV_ID}.jsonl").exists()
+    write_events(raw / "200_1.jsonl", dev_events(True))
+    ingest(raw, sessions, dev)
+    assert not (sessions / f"{DEV_ID}.jsonl").exists()
+    assert (dev / f"{DEV_ID}.jsonl").exists()
+
+
+def test_session_flipping_to_non_dev_leaves_dev_dir(dirs):
+    raw, sessions, dev = dirs
+    write_events(raw / "100_1.jsonl", dev_events(True))
+    ingest(raw, sessions, dev)
+    write_events(raw / "200_1.jsonl", dev_events(False))
+    ingest(raw, sessions, dev)
+    assert not (dev / f"{DEV_ID}.jsonl").exists()
+    assert (sessions / f"{DEV_ID}.jsonl").exists()
 
 
 def test_output_is_ordered_by_tick_then_seq(dirs):
-    raw, sessions = dirs
+    raw, sessions, dev = dirs
     shuffled = lines(FIXTURES / "session_normal.jsonl")[::-1]
     (raw / "100_1.jsonl").write_text("".join(json.dumps(e) + "\n" for e in shuffled))
-    ingest(raw, sessions)
+    ingest(raw, sessions, dev)
     out = lines(sessions / f"{NORMAL_ID}.jsonl")
     assert [e["seq"] for e in out] == sorted(e["seq"] for e in out)
 
 
 def test_skips_and_warns_on_unsupported_schema(dirs, capsys):
-    raw, sessions = dirs
+    raw, sessions, dev = dirs
     events = lines(FIXTURES / "session_normal.jsonl")
     events[0]["schema_version"] = 2
     (raw / "100_1.jsonl").write_text("".join(json.dumps(e) + "\n" for e in events))
-    report = ingest(raw, sessions)
+    report = ingest(raw, sessions, dev)
     assert (report.written, report.skipped_schema) == (0, 1)
     assert "schema_version" in capsys.readouterr().err
     assert not list(sessions.glob("*.jsonl"))
 
 
 def test_rerun_is_idempotent(dirs):
-    raw, sessions = dirs
+    raw, sessions, dev = dirs
     put(raw, "session_normal.jsonl", "100_1.jsonl")
-    ingest(raw, sessions)
+    ingest(raw, sessions, dev)
     first = (sessions / f"{NORMAL_ID}.jsonl").read_text()
-    ingest(raw, sessions)
+    ingest(raw, sessions, dev)
     assert (sessions / f"{NORMAL_ID}.jsonl").read_text() == first
     assert not list(sessions.glob("*.tmp"))
 
@@ -88,9 +129,9 @@ def write_events(path, events):
 
 @pytest.mark.parametrize("bad_id", ["../escape", "/abs/x", ["a"], 7])
 def test_rejects_unsafe_session_ids(dirs, tmp_path, bad_id):
-    raw, sessions = dirs
+    raw, sessions, dev = dirs
     write_events(raw / "100_1.jsonl", [{"session_id": bad_id, "seq": 1, "schema_version": 1}])
-    report = ingest(raw, sessions)
+    report = ingest(raw, sessions, dev)
     assert (report.written, report.skipped_invalid) == (0, 1)
     assert not list(tmp_path.rglob("escape.jsonl"))
     assert not list(sessions.glob("*.jsonl"))
@@ -108,8 +149,8 @@ def test_rejects_unsafe_session_ids(dirs, tmp_path, bad_id):
     ],
 )
 def test_malformed_session_is_skipped_without_aborting(dirs, events):
-    raw, sessions = dirs
+    raw, sessions, dev = dirs
     write_events(raw / "100_1.jsonl", events)
     put(raw, "session_normal.jsonl", "101_1.jsonl")
-    report = ingest(raw, sessions)
+    report = ingest(raw, sessions, dev)
     assert (report.written, report.skipped_invalid) == (1, 1)
