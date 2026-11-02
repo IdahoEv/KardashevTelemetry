@@ -1,19 +1,18 @@
-import { useQuery } from "@tanstack/react-query";
-import { fetchHealth } from "./api";
+import { Route, Routes } from "react-router";
+import { AppShell } from "./layout/AppShell";
+import { HealthPage } from "./routes/HealthPage";
+import { StyleguidePage } from "./routes/StyleguidePage";
+import { ThemeProvider } from "./theme/ThemeProvider";
 
 export default function App() {
-  const { data, error, isPending } = useQuery({ queryKey: ["health"], queryFn: fetchHealth });
-
   return (
-    <main>
-      <h1>Kardashev Telemetry</h1>
-      {isPending && <p>Loading…</p>}
-      {error && <p role="alert">API unreachable: {error.message}</p>}
-      {data && (
-        <p>
-          API {data.status} · {data.session_count} sessions
-        </p>
-      )}
-    </main>
+    <ThemeProvider>
+      <Routes>
+        <Route element={<AppShell />}>
+          <Route index element={<HealthPage />} />
+          {import.meta.env.DEV && <Route path="styleguide" element={<StyleguidePage />} />}
+        </Route>
+      </Routes>
+    </ThemeProvider>
   );
 }
