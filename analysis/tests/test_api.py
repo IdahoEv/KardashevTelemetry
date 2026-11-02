@@ -87,6 +87,12 @@ def test_sessions_empty_data_dir(tmp_path):
     assert _sessions(tmp_path) == {"total_unfiltered": 0, "total": 0, "sessions": []}
 
 
+def test_sessions_empty_filter_values_are_ignored(full_data_dir):
+    unfiltered = _sessions(full_data_dir)
+    assert _sessions(full_data_dir, "?build=") == unfiltered
+    assert _sessions(full_data_dir, "?reached=") == unfiltered
+
+
 def test_sessions_rejects_unknown_dev_mode(full_data_dir):
     response = TestClient(create_app(full_data_dir)).get("/api/sessions?dev=bogus")
     assert response.status_code == 422
@@ -128,6 +134,15 @@ def test_stats_empty_match_is_null_not_an_error(full_data_dir):
     assert stats["wall_time_s"] == {"n": 0, "median": None, "mean": None}
     assert stats["goals"] == {}
     assert stats["events_per_session"] == {"n": 0, "median": None}
+
+
+def test_stats_tolerates_milestone_reached_without_an_id(make_data_dir):
+    data_dir = make_data_dir(sessions=["session_normal.jsonl"])
+    path = data_dir / "sessions" / "session_normal.jsonl"
+    path.write_text(path.read_text().replace('"milestone_id": "G2", ', ""))
+    stats = _stats(data_dir)
+    assert stats["sessions"] == 1
+    assert set(stats["goals"]) == {"G1"}
 
 
 def test_stats_with_no_data(tmp_path):

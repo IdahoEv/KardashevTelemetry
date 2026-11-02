@@ -17,7 +17,13 @@ def session_filters(
     build: Annotated[list[str], Query()] = [],
     reached: Annotated[list[str], Query()] = [],
 ) -> SessionFilters:
-    return SessionFilters(dev=dev, name=name, build=build, reached=reached)
+    # An empty repeated param (?build=) arrives as [""], which would match nothing.
+    return SessionFilters(
+        dev=dev,
+        name=name,
+        build=[v for v in build if v],
+        reached=[v for v in reached if v],
+    )
 
 
 def matches(session, filters):

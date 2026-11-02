@@ -24,12 +24,13 @@ select
     arg_min(build.commit, seq) as build_commit,
     max(t_ms) / 1000.0 as wall_time_s,
     max(sim_time_s) as sim_time_s,
-    list(props ->> 'milestone_id' order by seq) filter (where event = 'milestone_reached') as goals,
+    list(props ->> 'milestone_id' order by seq)
+        filter (where event = 'milestone_reached' and props ->> 'milestone_id' is not null) as goals,
     count(*) as event_count,
     bool_or(event = 'session_end') as ended,
     count(*) filter (where event = 'building_stalled') as stall_count,
     list({{'goal': props ->> 'milestone_id', 'elapsed': (props ->> 'elapsed_sim_time_s')::double}} order by seq)
-        filter (where event = 'milestone_reached') as goal_times
+        filter (where event = 'milestone_reached' and props ->> 'milestone_id' is not null) as goal_times
 from e
 group by session_id
 order by session_id

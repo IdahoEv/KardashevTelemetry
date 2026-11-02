@@ -83,6 +83,16 @@ def test_last_goal_is_the_last_reached_not_the_highest_id(make_data_dir):
     assert load_sessions(data_dir)[0].last_goal == "A0"
 
 
+def test_milestone_without_an_id_is_skipped(make_data_dir):
+    data_dir = make_data_dir(sessions=["session_normal.jsonl"])
+    path = data_dir / "sessions" / "session_normal.jsonl"
+    path.write_text(path.read_text().replace('"milestone_id": "G2", ', ""))
+    s = load_sessions(data_dir)[0]
+    assert s.goals == ["G1"]
+    assert s.last_goal == "G1"
+    assert s.goal_times == {"G1": 5400.0}
+
+
 def test_truncated_line_does_not_fail_the_load(make_data_dir):
     data_dir = make_data_dir(sessions=["session_normal.jsonl", "session_stalled.jsonl"])
     path = data_dir / "sessions" / "session_stalled.jsonl"
