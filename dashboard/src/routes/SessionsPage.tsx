@@ -1,6 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import { fetchSessions, type SessionSummary } from "../api";
 import { Card } from "../components/Card";
 import { DataTable, type Column, type SortState } from "../components/DataTable";
@@ -19,20 +19,21 @@ import { useSessionFilters } from "../sessions/useSessionFilters";
 import "./pages.css";
 import "./SessionsPage.css";
 
-const columns: Column<SessionSummary>[] = [
-  {
-    key: "name",
-    header: "Name",
-    sortable: true,
-    render: (row) => (
-      <Link
-        className={row.player_name ? undefined : "sessions-link--unnamed"}
-        to={`/sessions/${row.session_id}`}
-      >
-        {row.player_name ?? "Unnamed"}
-      </Link>
-    ),
-  },
+function makeColumns(detailSearch: string): Column<SessionSummary>[] {
+  return [
+    {
+      key: "name",
+      header: "Name",
+      sortable: true,
+      render: (row) => (
+        <Link
+          className={row.player_name ? undefined : "sessions-link--unnamed"}
+          to={{ pathname: `/sessions/${row.session_id}`, search: detailSearch }}
+        >
+          {row.player_name ?? "Unnamed"}
+        </Link>
+      ),
+    },
   {
     key: "wallTime",
     header: "Wall time",
@@ -63,6 +64,7 @@ const columns: Column<SessionSummary>[] = [
     },
   },
 ];
+}
 
 const comparators: Record<string, (a: SessionSummary, b: SessionSummary) => number> = {
   name: (a, b) => compareNullableText(a.player_name, b.player_name),
@@ -72,13 +74,11 @@ const comparators: Record<string, (a: SessionSummary, b: SessionSummary) => numb
   build: compareSessionBuilds,
 };
 
-function columnIsNumeric(key: string): boolean {
-  return columns.find((column) => column.key === key)?.numeric ?? false;
-}
-
 export function SessionsPage() {
   const { filters, hasActiveFilters, setDev, setName, toggleBuild, toggleReached, clear } =
     useSessionFilters();
+  const location = useLocation();
+  const columns = useMemo(() => makeColumns(location.search), [location.search]);
   const { data, error, isPending } = useQuery({
     queryKey: ["sessions", filters],
     queryFn: () => fetchSessions(filters),
@@ -98,8 +98,9 @@ export function SessionsPage() {
 
   function handleSortToggle(key: string) {
     setSort((current) => {
+      const numeric = columns.find((column) => column.key === key)?.numeric ?? false;
       if (current?.key !== key) {
-        return { key, direction: columnIsNumeric(key) ? "desc" : "asc" };
+        return { key, direction: numeric ? "desc" : "asc" };
       }
       return { key, direction: current.direction === "asc" ? "desc" : "asc" };
     });

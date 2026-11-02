@@ -127,6 +127,17 @@ test("links each row to its session detail page", async () => {
   expect(screen.getByText("Unnamed").closest("a")?.getAttribute("href")).toBe("/sessions/3");
 });
 
+test("row links carry the active filters to the detail page", async () => {
+  stubSessionsResponse(FIXTURE);
+
+  renderPage(new QueryClient(), "/?name=ev&build=0.3.2");
+
+  await screen.findByText("3 of 5 sessions");
+  expect(screen.getByText("Ada").closest("a")?.getAttribute("href")).toBe(
+    "/sessions/1?name=ev&build=0.3.2",
+  );
+});
+
 test("sorts by name ascending on header click, nulls first", async () => {
   stubSessionsResponse(FIXTURE);
 

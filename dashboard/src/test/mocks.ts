@@ -1,5 +1,5 @@
 import { vi, type Mock } from "vitest";
-import type { SessionsResponse, StatsResponse } from "../api";
+import type { SessionDetail, SessionsResponse, StatsResponse } from "../api";
 
 export function statsFixture(overrides: Partial<StatsResponse> = {}): StatsResponse {
   return {
@@ -47,6 +47,22 @@ export function stubSessionsApi(
     }
     if (url.startsWith("/api/sessions")) return Promise.resolve(jsonResponse(filtered));
     // Unknown URLs 404 so a routing mistake fails loudly instead of serving stale fixtures.
+    return Promise.resolve(new Response("not found", { status: 404 }));
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
+
+export function stubSessionDetailApi(detail: SessionDetail | null): Mock {
+  const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+    const url = String(input);
+    if (/^\/api\/sessions\/[^?]+/.test(url)) {
+      return Promise.resolve(
+        detail
+          ? jsonResponse(detail)
+          : jsonResponse({ detail: "unknown session_id" }, 404),
+      );
+    }
     return Promise.resolve(new Response("not found", { status: 404 }));
   });
   vi.stubGlobal("fetch", fetchMock);

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { fetchStats, filtersToParams } from "./api";
+import { fetchSessionDetail, fetchStats, filtersToParams } from "./api";
 import { statsFixture } from "./test/mocks";
 
 afterEach(() => {
@@ -45,5 +45,33 @@ describe("fetchStats", () => {
     await expect(
       fetchStats({ dev: "exclude", name: "", build: [], reached: [] }),
     ).rejects.toThrow("stats request failed: 500");
+  });
+});
+
+describe("fetchSessionDetail", () => {
+  test("requests the URL-encoded session id", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("null"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await fetchSessionDetail("abc def/123");
+
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/sessions/abc%20def%2F123");
+  });
+
+  test("returns null on a 404", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response("{}", { status: 404 })),
+    );
+
+    expect(await fetchSessionDetail("s1")).toBeNull();
+  });
+
+  test("throws on another non-OK status", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 500 })));
+
+    await expect(fetchSessionDetail("s1")).rejects.toThrow(
+      "session detail request failed: 500",
+    );
   });
 });

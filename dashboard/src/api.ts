@@ -98,3 +98,26 @@ export async function fetchStats(filters: SessionFilterParams): Promise<StatsRes
   if (!response.ok) throw new Error(`stats request failed: ${response.status}`);
   return response.json();
 }
+
+export interface GoalTime {
+  goal: string;
+  sim_time_s: number;
+}
+
+export interface BuildingsData {
+  types: string[];
+  series: { sim_time_s: number; counts: Record<string, number> }[];
+}
+
+export interface SessionDetail extends SessionSummary {
+  goal_times: GoalTime[];
+  buildings: BuildingsData;
+}
+
+/** Returns null on 404, unlike the other wrappers, so the page can branch on it. */
+export async function fetchSessionDetail(sessionId: string): Promise<SessionDetail | null> {
+  const response = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}`);
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(`session detail request failed: ${response.status}`);
+  return response.json();
+}
