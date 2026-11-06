@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { formatBuild, formatPercent, formatSimTime, formatWallTime } from "./format";
+import { formatBuild, formatDayTick, formatPercent, formatSimTime, formatWallTime } from "./format";
 
 describe("formatWallTime", () => {
   test("formats zero", () => {
@@ -57,5 +57,12 @@ describe("formatBuild", () => {
 
   test("renders an em dash when neither is present", () => {
     expect(formatBuild(null, null)).toEqual({ label: "—" });
+  });
+});
+
+describe("formatDayTick", () => {
+  test("drops a trailing .0 and keeps one decimal", () => {
+    expect(formatDayTick(3)).toBe("3");
+    expect(formatDayTick(2.54)).toBe("2.5");
   });
 });
