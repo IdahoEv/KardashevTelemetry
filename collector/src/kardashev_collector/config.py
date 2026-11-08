@@ -31,7 +31,7 @@ class Settings:
         return cls(
             secrets=_parse_secrets(env.get("HMAC_SECRETS")),
             bucket=env["GCS_BUCKET"],
-            max_upload_bytes=int(env.get("MAX_UPLOAD_BYTES", cls.max_upload_bytes)),
-            policy_expiry_s=int(env.get("POLICY_EXPIRY_S", cls.policy_expiry_s)),
+            max_upload_bytes=int(env.get("MAX_UPLOAD_BYTES") or cls.max_upload_bytes),
+            policy_expiry_s=int(env.get("POLICY_EXPIRY_S") or cls.policy_expiry_s),
             revoked=revoked,
         )

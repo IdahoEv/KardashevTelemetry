@@ -32,3 +32,7 @@ def test_verify_rejects_wrong_secret():
 def test_verify_rejects_malformed_tokens():
     for token in ["", "garbage", "v.abc", "vx.abc", "v2.", "v2", "2.abc", "v2.é"]:
         assert not verify_token(token, INSTALL, SECRETS)
+
+
+def test_oversized_version_digits_are_rejected_not_raised():
+    assert verify_token("v" + "9" * 5000 + ".x", "id", {1: b"s"}) is False

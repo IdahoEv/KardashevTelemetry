@@ -15,7 +15,7 @@ def mint_token(install_id, version, secret):
 
 def verify_token(token, install_id, secrets: Mapping[int, bytes]):
     prefix, dot, digest = token.partition(".")
-    if not dot or not prefix.startswith("v") or not prefix[1:].isascii() or not prefix[1:].isdigit():
+    if not dot or not prefix.startswith("v") or not prefix[1:].isascii() or not prefix[1:].isdigit() or len(prefix) > 7:
         return False
     secret = secrets.get(int(prefix[1:]))
     if secret is None:

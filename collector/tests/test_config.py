@@ -45,3 +45,9 @@ def test_requires_bucket():
     del e["GCS_BUCKET"]
     with pytest.raises(ValueError):
         Settings.from_env(e)
+
+
+def test_blank_optional_values_fall_back_to_defaults():
+    s = Settings.from_env(env(MAX_UPLOAD_BYTES="", POLICY_EXPIRY_S="", REVOKED_INSTALL_IDS=""))
+    assert s.max_upload_bytes == Settings.max_upload_bytes
+    assert s.policy_expiry_s == Settings.policy_expiry_s
