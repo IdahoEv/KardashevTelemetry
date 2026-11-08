@@ -14,7 +14,7 @@ Analysis of playtest telemetry from [Kardashev](https://github.com/IdahoEv/Karda
 | `dashboard/` | Vite + React + TypeScript dashboard |
 | `docs/` | Project docs |
 
-A `collector/` directory will be added later.
+`collector/` is the upload-policy service; design in `docs/collector-design.md`.
 
 ## Run
 
