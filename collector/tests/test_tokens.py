@@ -1,4 +1,4 @@
-from kardashev_collector.tokens import mint_token, verify_token
+from kardashev_collector.tokens import mint_token, registration_key_valid, verify_token
 
 INSTALL = "00000000-0000-4000-8000-00000000a001"
 OTHER = "00000000-0000-4000-8000-00000000a002"
@@ -36,3 +36,18 @@ def test_verify_rejects_malformed_tokens():
 
 def test_oversized_version_digits_are_rejected_not_raised():
     assert verify_token("v" + "9" * 5000 + ".x", "id", {1: b"s"}) is False
+
+
+def test_registration_key_matches_any_configured_key():
+    keys = frozenset({b"k1", b"k2"})
+    assert registration_key_valid("k1", keys)
+    assert registration_key_valid("k2", keys)
+
+
+def test_registration_key_rejects_wrong_missing_or_empty():
+    keys = frozenset({b"k1"})
+    assert not registration_key_valid("nope", keys)
+    assert not registration_key_valid("", keys)
+    assert not registration_key_valid(None, keys)
+    assert not registration_key_valid("k1", frozenset())
+    assert not registration_key_valid("é", keys)

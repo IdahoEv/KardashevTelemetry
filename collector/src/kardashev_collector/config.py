@@ -27,6 +27,7 @@ class Settings:
     max_upload_bytes: int = 10 * 1024 * 1024
     policy_expiry_s: int = 600
     revoked: frozenset = frozenset()
+    registration_keys: frozenset = frozenset()
 
     @property
     def current_version(self):
@@ -37,10 +38,16 @@ class Settings:
         if not env.get("GCS_BUCKET"):
             raise ValueError("GCS_BUCKET is required")
         revoked = frozenset(i.strip() for i in env.get("REVOKED_INSTALL_IDS", "").split(",") if i.strip())
+        registration_keys = frozenset(
+            k.strip().encode() for k in env.get("REGISTRATION_KEYS", "").split(",") if k.strip()
+        )
+        if not registration_keys:
+            raise ValueError("REGISTRATION_KEYS must list at least one key")
         return cls(
             secrets=_parse_secrets(env.get("HMAC_SECRETS")),
             bucket=env["GCS_BUCKET"],
             max_upload_bytes=_positive_int(env, "MAX_UPLOAD_BYTES", cls.max_upload_bytes),
             policy_expiry_s=_positive_int(env, "POLICY_EXPIRY_S", cls.policy_expiry_s),
             revoked=revoked,
+            registration_keys=registration_keys,
         )

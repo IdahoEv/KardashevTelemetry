@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 from kardashev_collector.keys import ID_PATTERN, object_key
 from kardashev_collector.ratelimit import FixedWindowLimiter
-from kardashev_collector.tokens import mint_token, verify_token
+from kardashev_collector.tokens import mint_token, registration_key_valid, verify_token
 
 logger = logging.getLogger(__name__)
 
@@ -41,9 +41,15 @@ def create_app(settings, signer, upload_limiter=None, register_limiter=None):
             raise HTTPException(status_code=403, detail="install revoked")
 
     @app.post("/register")
-    def register(body: RegisterRequest, request: Request):
+    def register(
+        body: RegisterRequest,
+        request: Request,
+        registration_key: str | None = Header(None, alias="X-Registration-Key"),
+    ):
         if not register_limiter.allow(client_ip(request)):
             raise HTTPException(status_code=429, detail="rate limited")
+        if not registration_key_valid(registration_key, settings.registration_keys):
+            raise HTTPException(status_code=401, detail="invalid registration key")
         refuse_revoked(body.install_id)
         secret = settings.secrets[settings.current_version]
         return {"token": mint_token(body.install_id, settings.current_version, secret)}

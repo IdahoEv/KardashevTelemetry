@@ -4,7 +4,7 @@ from kardashev_collector.config import Settings
 
 
 def env(**over):
-    base = {"HMAC_SECRETS": "1:old,2:new", "GCS_BUCKET": "bkt"}
+    base = {"HMAC_SECRETS": "1:old,2:new", "GCS_BUCKET": "bkt", "REGISTRATION_KEYS": "rk1,rk2"}
     base.update(over)
     return base
 
@@ -63,3 +63,18 @@ def test_rejects_duplicate_secret_versions():
 def test_rejects_non_positive_limits(name, value):
     with pytest.raises(ValueError):
         Settings.from_env(env(**{name: value}))
+
+
+def test_parses_registration_keys():
+    assert Settings.from_env(env()).registration_keys == frozenset({b"rk1", b"rk2"})
+
+
+@pytest.mark.parametrize("keys", [None, "", " , "])
+def test_requires_registration_keys(keys):
+    e = env()
+    if keys is None:
+        del e["REGISTRATION_KEYS"]
+    else:
+        e["REGISTRATION_KEYS"] = keys
+    with pytest.raises(ValueError):
+        Settings.from_env(e)

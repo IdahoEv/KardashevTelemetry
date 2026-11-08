@@ -6,6 +6,7 @@ from kardashev_collector.config import Settings
 from kardashev_collector.ratelimit import FixedWindowLimiter
 from kardashev_collector.tokens import mint_token
 
+REG_KEY = "reg-key-1"
 INSTALL = "00000000-0000-4000-8000-00000000a001"
 SESSION = "11111111-0000-4000-8000-000000000001"
 
@@ -26,6 +27,7 @@ def make_settings(**over):
         max_upload_bytes=1000,
         policy_expiry_s=600,
         revoked=frozenset(),
+        registration_keys=frozenset({REG_KEY.encode()}),
     )
     values.update(over)
     return Settings(**values)
@@ -36,14 +38,15 @@ def signer():
     return FakeSigner()
 
 
-def make_client(signer, settings=None, upload_limit=100, register_limit=100):
+def make_client(signer, settings=None, upload_limit=100, register_limit=100, registration_key=REG_KEY):
     app = create_app(
         settings or make_settings(),
         signer,
         upload_limiter=FixedWindowLimiter(upload_limit, 60),
         register_limiter=FixedWindowLimiter(register_limit, 60),
     )
-    return TestClient(app)
+    headers = {"X-Registration-Key": registration_key} if registration_key else {}
+    return TestClient(app, headers=headers)
 
 
 def auth(install=INSTALL, version=2, secret=b"new"):
@@ -177,3 +180,27 @@ def test_upload_policy_refuses_revoked_install(signer):
     client = make_client(signer, make_settings(revoked=frozenset({INSTALL})))
     assert client.post("/upload-policy", json=policy_body(), headers=auth()).status_code == 403
     assert signer.calls == []
+
+
+@pytest.mark.parametrize("key", [None, "wrong", ""])
+def test_register_rejects_bad_or_missing_registration_key(signer, key):
+    client = make_client(signer, registration_key=key)
+    assert client.post("/register", json={"install_id": INSTALL}).status_code == 401
+
+
+def test_register_accepts_any_configured_registration_key(signer):
+    settings = make_settings(registration_keys=frozenset({b"a", b"b"}))
+    for key in ("a", "b"):
+        client = make_client(signer, settings, registration_key=key)
+        assert client.post("/register", json={"install_id": INSTALL}).status_code == 200
+
+
+def test_register_with_no_keys_configured_refuses_everyone(signer):
+    client = make_client(signer, make_settings(registration_keys=frozenset()))
+    assert client.post("/register", json={"install_id": INSTALL}).status_code == 401
+
+
+def test_bad_registration_keys_consume_ip_quota(signer):
+    client = make_client(signer, register_limit=1, registration_key="wrong")
+    assert client.post("/register", json={"install_id": INSTALL}).status_code == 401
+    assert client.post("/register", json={"install_id": INSTALL}).status_code == 429

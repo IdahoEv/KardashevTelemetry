@@ -21,3 +21,11 @@ def verify_token(token, install_id, secrets: Mapping[int, bytes]):
     if secret is None:
         return False
     return hmac.compare_digest(digest.encode(), _digest(install_id, secret).encode())
+
+
+def registration_key_valid(candidate, keys):
+    if not candidate or not candidate.isascii():
+        return False
+    encoded = candidate.encode()
+    # Evaluate every key so timing doesn't reveal which one matched.
+    return any([hmac.compare_digest(encoded, key) for key in keys])

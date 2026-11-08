@@ -12,6 +12,7 @@ Decision: the service issues install tokens on first consent (`POST /register`),
 | Token source | Issued by the service, not minted from a secret shipped in the client |
 | Token format | `v<N>.` + base64url(HMAC-SHA256(secret_vN, install_id)), unpadded |
 | Verification | Parse version, look up `secret_vN`, recompute, `hmac.compare_digest` |
+| Registration key | `/register` requires `X-Registration-Key`, matched in constant time against `REGISTRATION_KEYS` (comma-separated, from Secret Manager). Shipped in the client build, so extractable: it stops callers who only read the API, not a determined attacker. Rotate by listing old + new, shipping the new build, then dropping the old. Failed attempts consume the per-IP quota, 401 on mismatch. Required at startup |
 | Rotation | Secret Manager holds current + previous versions. Verify accepts both, `/register` mints with current. Verify logs the secret version. Drop the old one when old-version traffic is near zero; clients that then get 401 re-register (with jitter). Suspected secret compromise: drop it immediately and accept the re-register wave |
 | Revocation | Denylist of `install_id`s in env/secret; checked on `/register` and `/upload-policy`. Stops only honest clients; a revoked install can register a fresh id |
 | Policy size cap | `content-length-range` 1..`MAX_UPLOAD_BYTES` (default 10 MiB) |
@@ -24,7 +25,7 @@ Decision: the service issues install tokens on first consent (`POST /register`),
 ## First-consent flow
 
 1. Player consents. The game already holds a random `install_id`.
-2. Client calls `POST /register {install_id}` and gets `{token}`.
+2. Client calls `POST /register {install_id}` with `X-Registration-Key` and gets `{token}`.
 3. Client stores the token locally (next to `install_id`).
 4. Per session upload: `POST /upload-policy {install_id, session_id}` with `Authorization: Bearer <token>`. Response is the signed policy (`url`, `fields`).
 5. Client POSTs the file to GCS with those fields. Repeat at later checkpoints to overwrite the same key.
@@ -39,13 +40,13 @@ A secret shipped in the client binary is extractable by anyone, and one leak for
 
 | Covered | Not covered |
 |---|---|
-| Drive-by uploads with no token | An attacker who registers many fresh `install_id`s (each gets a valid token) |
+| Drive-by uploads with no token. Registration by callers without the build's registration key | An attacker who extracts the registration key from a build and registers many fresh `install_id`s (each gets a valid token) |
 | Overwriting another install's objects without knowing its `install_id` (ids are random UUIDs, never listed) | Anyone who learns an `install_id` can call `/register` and obtain its token: `install_id` is the credential and the token adds no second factor. It also appears in session data, so uploaded events and shared sessions must be treated as exposing it |
 | Oversized uploads (size cap enforced by GCS) | Junk or forged event content within the size cap |
 | One install flooding policies (per-install limit) | Distributed floods that stay under per-IP limits |
 | Revocation of an honest or buggy install | Revocation of an attacker (fresh ids bypass per-install limits and the denylist) |
 
-Mitigations for the uncovered rows: per-IP limit on `/register` (the real gate against fresh-id minting), bucket lifecycle rule (delete objects older than 180 days), project budget alerts, `max-instances` cap on Cloud Run. Revisit if abuse appears.
+Mitigations for the uncovered rows: per-IP limit on `/register` (the real gate against fresh-id minting; the registration key only raises the bar), per-release key rotation, bucket lifecycle rule (delete objects older than 180 days), project budget alerts, `max-instances` cap on Cloud Run. Revisit if abuse appears.
 
 ## Cost estimate
 
