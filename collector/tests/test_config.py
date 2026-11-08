@@ -51,3 +51,15 @@ def test_blank_optional_values_fall_back_to_defaults():
     s = Settings.from_env(env(MAX_UPLOAD_BYTES="", POLICY_EXPIRY_S="", REVOKED_INSTALL_IDS=""))
     assert s.max_upload_bytes == Settings.max_upload_bytes
     assert s.policy_expiry_s == Settings.policy_expiry_s
+
+
+def test_rejects_duplicate_secret_versions():
+    with pytest.raises(ValueError):
+        Settings.from_env(env(HMAC_SECRETS="1:a,1:b"))
+
+
+@pytest.mark.parametrize("name", ["MAX_UPLOAD_BYTES", "POLICY_EXPIRY_S"])
+@pytest.mark.parametrize("value", ["0", "-5"])
+def test_rejects_non_positive_limits(name, value):
+    with pytest.raises(ValueError):
+        Settings.from_env(env(**{name: value}))

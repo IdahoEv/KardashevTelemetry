@@ -1,9 +1,13 @@
+import logging
+
 from fastapi import FastAPI, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from kardashev_collector.keys import ID_PATTERN, object_key
 from kardashev_collector.ratelimit import FixedWindowLimiter
 from kardashev_collector.tokens import mint_token, verify_token
+
+logger = logging.getLogger(__name__)
 
 
 class RegisterRequest(BaseModel):
@@ -52,6 +56,10 @@ def create_app(settings, signer, upload_limiter=None, register_limiter=None):
         if not upload_limiter.allow(body.install_id):
             raise HTTPException(status_code=429, detail="rate limited")
         key = object_key(body.install_id, body.session_id)
-        return signer.sign(key, settings.max_upload_bytes, settings.policy_expiry_s)
+        try:
+            return signer.sign(key, settings.max_upload_bytes, settings.policy_expiry_s)
+        except Exception:
+            logger.exception("policy signing failed")
+            raise HTTPException(status_code=503, detail="signing unavailable")
 
     return app

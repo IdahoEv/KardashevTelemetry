@@ -7,8 +7,17 @@ def _parse_secrets(raw):
         version, sep, secret = part.strip().partition(":")
         if not sep or not version.isascii() or not version.isdigit() or not secret:
             raise ValueError("HMAC_SECRETS must be 'version:secret' pairs, comma-separated")
+        if int(version) in secrets:
+            raise ValueError(f"HMAC_SECRETS repeats version {int(version)}")
         secrets[int(version)] = secret.encode()
     return secrets
+
+
+def _positive_int(env, name, default):
+    value = int(env.get(name) or default)
+    if value < 1:
+        raise ValueError(f"{name} must be at least 1")
+    return value
 
 
 @dataclass(frozen=True)
@@ -31,7 +40,7 @@ class Settings:
         return cls(
             secrets=_parse_secrets(env.get("HMAC_SECRETS")),
             bucket=env["GCS_BUCKET"],
-            max_upload_bytes=int(env.get("MAX_UPLOAD_BYTES") or cls.max_upload_bytes),
-            policy_expiry_s=int(env.get("POLICY_EXPIRY_S") or cls.policy_expiry_s),
+            max_upload_bytes=_positive_int(env, "MAX_UPLOAD_BYTES", cls.max_upload_bytes),
+            policy_expiry_s=_positive_int(env, "POLICY_EXPIRY_S", cls.policy_expiry_s),
             revoked=revoked,
         )

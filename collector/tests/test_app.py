@@ -154,6 +154,25 @@ def test_failed_auth_does_not_consume_install_quota(signer):
     assert client.post("/upload-policy", json=policy_body(), headers=auth()).status_code == 200
 
 
+def test_upload_policy_returns_503_when_signing_fails(signer):
+    def boom(*args):
+        raise RuntimeError("iam down")
+
+    signer.sign = boom
+    client = make_client(signer)
+    r = client.post("/upload-policy", json=policy_body(), headers=auth())
+    assert r.status_code == 503
+    assert client.post("/register", json={"install_id": INSTALL}).status_code == 200
+
+
+def test_register_ip_falls_back_to_peer_without_two_forwarded_entries(signer):
+    client = make_client(signer, register_limit=1)
+    headers = {"X-Forwarded-For": "9.9.9.9"}
+    assert client.post("/register", json={"install_id": INSTALL}, headers=headers).status_code == 200
+    headers = {"X-Forwarded-For": "8.8.8.8"}
+    assert client.post("/register", json={"install_id": INSTALL}, headers=headers).status_code == 429
+
+
 def test_upload_policy_refuses_revoked_install(signer):
     client = make_client(signer, make_settings(revoked=frozenset({INSTALL})))
     assert client.post("/upload-policy", json=policy_body(), headers=auth()).status_code == 403

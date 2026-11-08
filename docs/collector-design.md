@@ -18,7 +18,8 @@ Decision: the service issues install tokens on first consent (`POST /register`),
 | Policy expiry | 10 minutes |
 | Policy conditions | exact `key`, `content-type: application/x-ndjson`, size range |
 | Re-upload | Same key overwrites (last write wins). Bucket soft-delete, 7 days, recovers a truncated or junk overwrite |
-| Rate limiting | In-memory fixed window: per `install_id` on `/upload-policy`, per client IP on `/register`. Cloud Run `max-instances` kept low and windows reset on cold start, so limits are approximate. Client IP is the entry Google's frontend appends to `X-Forwarded-For` (second from the right), never the client-supplied leftmost |
+| Rate limiting | In-memory fixed window: per `install_id` on `/upload-policy`, per client IP on `/register`. Cloud Run `max-instances` kept low and windows reset on cold start, so limits are approximate. Client IP is the entry Google's frontend appends to `X-Forwarded-For` (second from the right), never the client-supplied leftmost. Precondition: the service sits behind Google's HTTP load balancer (3+ entries); with fewer than two entries the code falls back to the socket peer, so a direct `run.app` deployment shares one `/register` bucket. Limits: 60/min per `install_id`, 10/min per IP (code constants) |
+| Status codes | 401 bad or missing token, 403 revoked install (not retryable; client stops uploading), 422 malformed ids, 429 over rate (retry with backoff), 503 signing backend unavailable (retry with backoff) |
 
 ## First-consent flow
 
