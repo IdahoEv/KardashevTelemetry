@@ -10,7 +10,7 @@ Analysis tooling (and later a GCP collector) for session telemetry emitted by th
 |---|---|
 | `analysis/` | Python package: `src`, `tests` (+ `tests/fixtures/` synthetic sessions), `sql/` canned DuckDB queries |
 | `dashboard/` | Vite + React + TypeScript SPA (TanStack Query, Vitest, ESLint). Talks to the API in `analysis/src/kardashev_analysis/api.py`; data access lives in `sessions_store.py` |
-| `collector/` | FastAPI upload-policy service. Not yet created (Is5); own tests and CI job |
+| `collector/` | FastAPI upload-policy service (own uv project, `uv run --project collector pytest -q`, own CI job) |
 | `docs/` | Design docs (e.g. `collector-design.md` from Is4) |
 | `data/` | Local session store: `raw/`, `sessions/`, `dev_sessions/`. Gitignored |
 | `.scratch/` | Throwaway scripts and queries. Gitignored |
